@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "461283669533",
+    "project_id": "namyongapp",
+    "storage_bucket": "namyongapp.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:461283669533:android:996776007d126e0b63f8f4",
+        "android_client_info": {
+          "package_name": "com.example.namyong_demo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAiZIj8-WOrtEoZCVYV8_mUC8zRf1oiPQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

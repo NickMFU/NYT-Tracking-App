@@ -7,7 +7,7 @@ class ScanBarcodePage extends StatefulWidget {
 }
 
 class _ScanBarcodePageState extends State<ScanBarcodePage> {
-  String _barcodeResult = "Scan a barcode";
+  List<String> _scannedBarcodes = [];
 
   @override
   Widget build(BuildContext context) {
@@ -19,16 +19,33 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(
-              _barcodeResult,
-              style: TextStyle(fontSize: 20),
-            ),
-            SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
                 _scanBarcode();
               },
               child: Text('Scan Barcode'),
+            ),
+            SizedBox(height: 20),
+            Text(
+              'Scanned Barcodes:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _scannedBarcodes.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(_scannedBarcodes[index]),
+                    trailing: IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () {
+                        _deleteBarcode(index);
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -48,12 +65,17 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
       if (!mounted) return;
 
       setState(() {
-        _barcodeResult = barcodeResult;
+        _scannedBarcodes.add(barcodeResult);
       });
     } catch (e) {
-      setState(() {
-        _barcodeResult = 'Error: $e';
-      });
+      // Handle error
+      print('Error: $e');
     }
+  }
+
+  void _deleteBarcode(int index) {
+    setState(() {
+      _scannedBarcodes.removeAt(index);
+    });
   }
 }

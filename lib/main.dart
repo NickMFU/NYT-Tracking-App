@@ -9,7 +9,7 @@ import 'package:namyong_demo/screen/Notification.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 Future<void> checkFirebaseInitialization() async {

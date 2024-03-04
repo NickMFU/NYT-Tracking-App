@@ -1,10 +1,13 @@
-// Dashboard.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:namyong_demo/screen/AllWork.dart';
 import 'package:namyong_demo/screen/RecordDamage.dart';
-import 'package:namyong_demo/screen/allwork2.dart';
 import 'package:namyong_demo/screen/login.dart';
+import 'package:namyong_demo/Component/bottom_nav.dart';
+import 'package:namyong_demo/screen/regis.dart';
+import 'package:namyong_demo/screen/work_status/cancel_work.dart';
+import 'package:namyong_demo/screen/work_status/finish_work.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({Key? key}) : super(key: key);
@@ -14,19 +17,79 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
+  late String _firstName = '';
+  late String _lastName = '';
+  int _currentIndex = 0;
+
+   void initState() {
+    super.initState();
+    _loadUserData();
+  }
+  
+ Future<void> _loadUserData() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        DocumentSnapshot userData = await FirebaseFirestore.instance
+            .collection('Employee')
+            .doc(user.uid)
+            .get();
+        setState(() {
+          _firstName = userData['Firstname'];
+          _lastName = userData['Lastname'];
+        });
+      } catch (e) {
+        print('Error loading user data: $e');
+      }
+    }
+  }
+
+   Future<void> _signOut() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      // Navigate back to the login page after logout
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+    } catch (e) {
+      print('Error signing out: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0.0,
-        toolbarHeight: 100,
-        title: Text(
-          "DashBoard",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
+       appBar: AppBar(
+        title: Text('Dashboard'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                const Icon(Icons.person),
+                const SizedBox(width: 5),
+                Text('$_firstName $_lastName'),
+                 const SizedBox(width: 5),
+                PopupMenuButton(
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      child: Text('Logout'),
+                      value: 'logout',
+                    ),
+                  ],
+                  onSelected: (value) {
+                    if (value == 'logout') {
+                      _signOut();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+         flexibleSpace: Container(
+          decoration: const BoxDecoration(
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(20),
@@ -42,10 +105,7 @@ class _DashboardState extends State<Dashboard> {
           ),
         ),
       ),
-      
-      
       body: Container(
-        
         padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 2.0),
         child: GridView.count(
           crossAxisCount: 2,
@@ -58,11 +118,16 @@ class _DashboardState extends State<Dashboard> {
           ],
         ),
       ),
-      
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        onTap: (int index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
     );
   }
-
-  // ... rest of the code ...
 
   Card makeDashboardItem(String title, IconData icon, String collection) {
     return Card(
@@ -87,31 +152,31 @@ class _DashboardState extends State<Dashboard> {
 
             int itemCount = snapshot.data?.docs.length ?? 0;
 
-          return InkWell(
-            onTap: () {
-              if (title == "Total") {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) =>  AllWork()),
-                );
-              } else if (title == "Complete") {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) =>DisplayScreen()),
-                );
-              } else if (title == "On-progress") {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginPage()),
-                );
-              } else if (title == "Cancel") {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => RecordDamagePage()),
-                );
-              }
-            },
-            child: Column(
+            return InkWell(
+              onTap: () {
+                if (title == "Total") {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AllWork()),
+                  );
+                } else if (title == "Complete") {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => RegisterPage()),
+                  );
+                } else if (title == "On-progress") {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => FinishWorkPage()),
+                  );
+                } else if (title == "Cancel") {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => NoStatusWorkPage()),
+                  );
+                }
+              },
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 verticalDirection: VerticalDirection.down,

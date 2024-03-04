@@ -8,9 +8,9 @@ class Work {
   final String shipping;
   final Duration? estimatedCompletionTime;
   final String employeeId;
-  final List<String> statuses;
   final String responsiblePerson;
-  final String imageUrl; // Add imageUrl field
+  final String imageUrl;
+  List<String> statuses;
 
   Work({
     required this.workID,
@@ -23,9 +23,9 @@ class Work {
     required this.estimatedCompletionTime,
     required this.employeeId,
     required this.responsiblePerson,
-    required this.imageUrl, // Add imageUrl field
-    List<String>? statuses,
-  }) : statuses = statuses ?? [];
+    required this.imageUrl,
+    required this.statuses,
+  });
 
   factory Work.fromMap(Map<String, dynamic> map) {
     return Work(
@@ -41,7 +41,7 @@ class Work {
           : null,
       employeeId: map['employeeId'],
       responsiblePerson: map['responsiblePerson'],
-      imageUrl: map['imageUrl'], // Add imageUrl field
+      imageUrl: map['imageUrl'],
       statuses: List<String>.from(map['statuses'] ?? []),
     );
   }
@@ -58,12 +58,18 @@ class Work {
       'estimatedCompletionTime': estimatedCompletionTime?.inMilliseconds,
       'employeeId': employeeId,
       'responsiblePerson': responsiblePerson,
-      'imageUrl': imageUrl, // Add imageUrl field
+      'imageUrl': imageUrl,
       'statuses': statuses,
     };
   }
 
+  // Method to add a new status
   void addStatus(String newStatus) {
     statuses.add(newStatus);
+  }
+
+  // Method to update the status
+  void updateStatus(String newStatus, int index) {
+    statuses[index] = newStatus;
   }
 }

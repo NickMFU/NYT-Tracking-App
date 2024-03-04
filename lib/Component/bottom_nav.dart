@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:namyong_demo/screen/Dashboard.dart';
+import 'package:namyong_demo/screen/CreateWork.dart';
+import 'package:namyong_demo/screen/Notification.dart';
+import 'package:namyong_demo/screen/notitest.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
 
-  BottomNavBar({required this.currentIndex, required this.onTap});
+  const BottomNavBar({super.key, required this.currentIndex, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +37,7 @@ class BottomNavBar extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () {
                     onTap(i);
+                    _navigateToPage(context, i);
                   },
                   child: Container(
                     height: 70,
@@ -45,11 +50,11 @@ class BottomNavBar extends StatelessWidget {
                             Container(
                               width: 48,
                               height: 48,
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Color.fromARGB(224, 14, 94, 253),
                               ),
-                              child: Center(
+                              child: const Center(
                                 child: Icon(
                                   Icons.add,
                                   color: Colors.white,
@@ -68,8 +73,8 @@ class BottomNavBar extends StatelessWidget {
                                   margin: const EdgeInsets.only(top: 6),
                                   height: 3,
                                   width: 22,
-                                  decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.all(Radius.circular(40)),
+                                  decoration: const BoxDecoration(
+                                    borderRadius: BorderRadius.all(Radius.circular(40)),
                                     color: Color.fromARGB(224, 14, 94, 253),
                                   ),
                                 )
@@ -85,5 +90,21 @@ class BottomNavBar extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _navigateToPage(BuildContext context, int index) {
+    switch (index) {
+      case 0:
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard()));
+        break;
+      case 1:
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CreateWorkPage()));
+        break;
+      case 2:
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AcceptWorkPage(createdWorkID: '',)));
+        break;
+      default:
+        break;
+    }
   }
 }

@@ -3,7 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:namyong_demo/screen/EditWork.dart';
 import 'package:namyong_demo/screen/Timeline.dart';
 
-class AllWork extends StatelessWidget {
+class NoStatusWorkPage extends StatelessWidget {
+  const NoStatusWorkPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -12,7 +14,7 @@ class AllWork extends StatelessWidget {
         elevation: 0.0,
         toolbarHeight: 100,
         title: const Text(
-          "All Work",
+          "No Status Work",
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         flexibleSpace: Container(
@@ -32,7 +34,7 @@ class AllWork extends StatelessWidget {
           ),
         ),
       ),
-      body: WorkList(status: 'All'),
+      body: WorkList(status: 'NoStatus'),
     );
   }
 }
@@ -62,8 +64,10 @@ class WorkList extends StatelessWidget {
             var workData = snapshot.data!.docs[index].data() as Map<String, dynamic>;
             String workID = snapshot.data!.docs[index].id;
             
-            // Check if all works should be displayed or filtered by status
-            if (status == 'All' || workData['Status'] == status) {
+            // Check if the statuses list is empty or doesn't contain "NoStatus"
+            if (workData['statuses'] == null || !workData['statuses'].contains('NoStatus')) {
+              return SizedBox(); // Skip displaying works that don't have "NoStatus"
+            } else {
               return ListTile(
                 title: Text('Work ID: ${workData['workID']}'),
                 subtitle: Text('Date: ${workData['date']}'),
@@ -121,8 +125,6 @@ class WorkList extends StatelessWidget {
                   ],
                 ),
               );
-            } else {
-              return SizedBox(); // Return an empty SizedBox if the status doesn't match
             }
           },
         );

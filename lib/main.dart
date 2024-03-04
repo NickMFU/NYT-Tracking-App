@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:namyong_demo/Component/bottom_nav.dart';
-import 'package:namyong_demo/screen/DashBoard.dart';
-import 'package:namyong_demo/screen/CreateWork.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:namyong_demo/screen/Notification.dart';
-
+import 'package:namyong_demo/screen/login.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:namyong_demo/screen/Dashboard.dart';
+import 'package:namyong_demo/screen/Splash.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,30 +11,26 @@ void main() async {
   runApp(const MyApp());
 }
 
-Future<void> checkFirebaseInitialization() async {
-  try {
-    await Firebase.initializeApp();
-    print("Firebase initialized successfully!");
-  } catch (e) {
-    print("Error initializing Firebase: $e");
-  }
-}
-
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key});
+  const MyApp({super.key});
 
   @override
   _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  int _currentIndex = 0;
+  bool _isLoggedIn = false;
 
-  final List<Widget> _pages = [
-    Dashboard(),
-    CreateWorkPage(),
-    Noti(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    checkLoginStatus();
+  }
+
+  Future<void> checkLoginStatus() async {
+   SharedPreferences prefs = await SharedPreferences.getInstance();
+prefs.setBool('isLoggedIn', true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,17 +41,11 @@ class _MyAppState extends State<MyApp> {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: _pages[_currentIndex],
-        bottomNavigationBar: BottomNavBar(
-          currentIndex: _currentIndex,
-          onTap: (int index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-        ),
-      ),
+      home: _isLoggedIn ? const Dashboard() : SplashScreen(),
+      routes: {
+        '/login': (context) => LoginPage(),
+        '/dashboard': (context) => const Dashboard(),
+      },
     );
   }
 }

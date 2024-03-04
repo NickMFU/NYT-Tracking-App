@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:namyong_demo/Component/bottom_nav.dart';
 import 'package:namyong_demo/component/form_field.dart';
 import 'package:namyong_demo/model/Work.dart';
+import 'package:namyong_demo/screen/Notification.dart';
 import 'package:namyong_demo/screen/Timeline.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math';
 
 class CreateWorkPage extends StatefulWidget {
@@ -16,6 +19,7 @@ class CreateWorkPage extends StatefulWidget {
 
 class _CreateWorkPageState extends State<CreateWorkPage> {
   final _formKey = GlobalKey<FormState>();
+  final String? currentUserID = FirebaseAuth.instance.currentUser?.uid;
 
   TextEditingController _dateController = TextEditingController();
   TextEditingController _consigneeController = TextEditingController();
@@ -26,7 +30,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
   TextEditingController _employeeIdController = TextEditingController();
 
   List<String> employees = [];
-  ImagePicker _imagePicker = ImagePicker();
+  final ImagePicker _imagePicker = ImagePicker();
   File? _image;
 // Added _image to store the selected image
 
@@ -48,7 +52,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
       setState(() {
         // Update the employees list with the data from Firestore
         employees = employeeSnapshot.docs
-            .map((doc) => doc.get('EmployeeID'))
+            .map((doc) => doc.get('Firstname'))
             .where((employee) => employee != null)
             .map((employee) => employee.toString())
             .toList();
@@ -75,17 +79,18 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
 
   @override
   Widget build(BuildContext context) {
+    int _currentIndex = 1;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0.0,
         toolbarHeight: 100,
-        title: Text(
+        title: const Text(
           "Create work page",
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         flexibleSpace: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(20),
@@ -107,7 +112,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
           padding: EdgeInsets.all(16.0),
           children: [
              // Title above the form fields
-            Text(
+            const Text(
               "WharfID (BL/No)",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -118,7 +123,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               validText: 'Please enter a BL number',
             ),
             const SizedBox(height: 15.0),
-            Text(
+            const Text(
               "Date",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -129,7 +134,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               validText: 'Please enter a date',
             ),
             const SizedBox(height: 15.0),
-             Text(
+             const Text(
               "Consignee",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -140,7 +145,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               validText: 'Please enter a consignee',
             ),
             const SizedBox(height: 15.0),
-             Text(
+             const Text(
               "Vessel",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -151,7 +156,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               validText: 'Please enter a vessel',
             ),
             const SizedBox(height: 15.0),
-             Text(
+             const Text(
               "Voy",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -162,7 +167,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               validText: 'Please enter a voyage number',
             ),
             const SizedBox(height: 15.0),
-             Text(
+             const Text(
               "Shipping",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -173,7 +178,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               validText: 'Please enter shipping information',
             ),
             const SizedBox(height: 15.0),
-             Text(
+             const Text(
               "Choose Checker",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -193,12 +198,12 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
                         child: Text(employee),
                       ))
                   .toList(),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Select CheckerS',
               ),
             ),
-            SizedBox(height: 16.0),
-             Text(
+            const SizedBox(height: 16.0),
+             const Text(
               "Due time",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -219,81 +224,103 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
                 }
               },
             ),
-            SizedBox(height: 16.0),
-             Text(
+            const SizedBox(height: 16.0),
+             const Text(
               "Whalf Image",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15.0),
             ListTile(
               title: _image == null
-                  ? Text('Select Image')
+                  ? const Text('Select Image')
                   : Image.file(_image!),
               onTap: () async {
                 await getImage();
               },
             ),
-            SizedBox(height: 16.0),
+            const SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: () {
                 if (_formKey.currentState!.validate()) {
                   saveWorkToFirebase();
                 }
               },
-              child: Text('Create Work'),
+              child: const Text('Create Work'),
             ),
           ],
         ),
       ),
+       bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        onTap: (int index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
     );
   }
 
+  void navigateToAcceptWorkPage(String workID) {
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (context) => AcceptWorkPage(createdWorkID: workID),
+    ),
+  );
+}
+
   Future<void> saveWorkToFirebase() async {
-    try {
-      final CollectionReference workCollection =
-          FirebaseFirestore.instance.collection('works');
+  try {
+    final CollectionReference workCollection =
+        FirebaseFirestore.instance.collection('works');
+        
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    final String? firstName = currentUser?.displayName?.split(' ')[0]; // Extract first name
+    final String? lastName = currentUser?.displayName?.split(' ')[1]; // Extract last name
 
-      String workID = 'Work_${Random().nextInt(90000) + 10000}';
+    String workID = 'Work_${Random().nextInt(90000) + 10000}';
 
-      // Upload the image to Firebase Storage
-      String imageUrl = await uploadImageToFirebaseStorage(workID);
+    final String? currentUserID = FirebaseAuth.instance.currentUser?.uid;
 
-      Work work = Work(
-        workID: workID,
-        date: _dateController.text,
-        consignee: _consigneeController.text,
-        vessel: _vesselController.text,
-        voy: _voyController.text,
-        blNo: _blNoController.text,
-        shipping: _shippingController.text,
-        estimatedCompletionTime: _estimatedCompletionTime != null
-            ? Duration(
-                hours: _estimatedCompletionTime!.hour,
-                minutes: _estimatedCompletionTime!.minute,
-              )
-            : null,
-        employeeId: _employeeIdController.text,
-        responsiblePerson: '',
-        imageUrl: imageUrl, // Set the imageUrl in the Work model
-      );
+     String responsiblePerson = '$firstName $lastName';
 
-      Map<String, dynamic> workData = work.toMap();
+    // Upload the image to Firebase Storage
+    String imageUrl = await uploadImageToFirebaseStorage(workID);
 
-      await workCollection.add(workData);
+    Work work = Work(
+      workID: workID,
+      date: _dateController.text,
+      consignee: _consigneeController.text,
+      vessel: _vesselController.text,
+      voy: _voyController.text,
+      blNo: _blNoController.text,
+      shipping: _shippingController.text,
+      estimatedCompletionTime: _estimatedCompletionTime != null
+          ? Duration(
+              hours: _estimatedCompletionTime!.hour,
+              minutes: _estimatedCompletionTime!.minute,
+            )
+          : null,
+      employeeId: _employeeIdController.text,
+      responsiblePerson: currentUserID ?? '',
+      imageUrl: imageUrl, // Set the imageUrl in the Work model
+      statuses: ['NoStatus'], // Set the initial status as "NoStatus"
+    );
 
-      print('Work data saved to Firestore successfully! WorkID: $workID');
+    Map<String, dynamic> workData = work.toMap();
 
-      // Navigate to the TimelinePage after creating the work
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TimelinePage(workID: workID),
-        ),
-      );
-    } catch (e) {
-      print('Error saving work data: $e');
-    }
+    await workCollection.add(workData);
+
+    print('Work data saved to Firestore successfully! WorkID: $workID');
+
+    // Navigate to the AcceptWorkPage after creating the work
+    navigateToAcceptWorkPage(workID);
+  } catch (e) {
+    print('Error saving work data: $e');
   }
+}
+
 
   Future<String> uploadImageToFirebaseStorage(String workID) async {
     try {

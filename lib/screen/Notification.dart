@@ -1,22 +1,49 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:namyong_demo/Component/bottom_nav.dart';
 import 'package:namyong_demo/screen/Timeline.dart';
 
+class AcceptWorkPage extends StatefulWidget {
+  final String createdWorkID;
 
-class Noti extends StatelessWidget {
+  AcceptWorkPage({required this.createdWorkID});
+
+  @override
+  _AcceptWorkPageState createState() => _AcceptWorkPageState();
+}
+
+class _AcceptWorkPageState extends State<AcceptWorkPage> {
+  List<String> works = []; // Placeholder for created works
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch the list of created works
+    fetchWorks();
+  }
+
+  // Method to fetch created works (placeholder for demonstration)
+  void fetchWorks() {
+    // Assuming you have a method to fetch works from a database or storage
+    // For demonstration, I'll add the created work ID to the list
+    setState(() {
+      works = [widget.createdWorkID];
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    int _currentIndex = 2;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0.0,
         toolbarHeight: 100,
-        title: Text(
-          "Total work",
+        title: const Text(
+          "All Work",
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         flexibleSpace: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(20),
@@ -32,46 +59,43 @@ class Noti extends StatelessWidget {
           ),
         ),
       ),
-      body: StreamBuilder(
-        stream: FirebaseFirestore.instance.collection('works').snapshots(),
-        builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return CircularProgressIndicator();
-          }
-
-          if (snapshot.hasError) {
-            return Text('Error: ${snapshot.error}');
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Text('No works available.');
-          }
-
-          return ListView.builder(
-            itemCount: snapshot.data!.docs.length,
-            itemBuilder: (context, index) {
-              var workData = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-
-              return Card(
-                elevation: 2,
-                margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                child: ListTile(
-                  title: Text('Work ID: ${workData['workID']}'),
-                  subtitle: Text('Date: ${workData['date']}'),
-                  onTap: () {
-                    // Navigate to TimelinePage with the workID
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TimelinePage(workID: workData['workID']),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          );
+      body: works.isEmpty
+          ? Center(
+              child: Text('No works available'),
+            )
+          : ListView.builder(
+              itemCount: works.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(works[index]),
+                  trailing: IconButton(
+                    icon: Icon(Icons.check),
+                    onPressed: () {
+                      // Accept the work and navigate to the TimelinePage
+                      acceptWork(works[index]);
+                    },
+                  ),
+                );
+              },
+            ),
+             bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        onTap: (int index) {
+          setState(() {
+            _currentIndex = index;
+          });
         },
+      ),
+    );
+  }
+
+  // Method to accept the work
+  void acceptWork(String work) {
+    // Navigate to the TimelinePage for the selected work
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TimelinePage(workID: work),
       ),
     );
   }

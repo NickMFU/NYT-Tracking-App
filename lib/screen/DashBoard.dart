@@ -1,13 +1,16 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:namyong_demo/screen/AllWork.dart';
-import 'package:namyong_demo/screen/RecordDamage.dart';
+import 'package:namyong_demo/screen/Stats.dart';
 import 'package:namyong_demo/screen/login.dart';
 import 'package:namyong_demo/Component/bottom_nav.dart';
+import 'package:namyong_demo/screen/profile.dart';
 import 'package:namyong_demo/screen/regis.dart';
 import 'package:namyong_demo/screen/work_status/cancel_work.dart';
 import 'package:namyong_demo/screen/work_status/finish_work.dart';
+import 'package:shimmer/shimmer.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({Key? key}) : super(key: key);
@@ -21,12 +24,12 @@ class _DashboardState extends State<Dashboard> {
   late String _lastName = '';
   int _currentIndex = 0;
 
-   void initState() {
+  void initState() {
     super.initState();
     _loadUserData();
   }
-  
- Future<void> _loadUserData() async {
+
+  Future<void> _loadUserData() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
@@ -44,7 +47,7 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
-   Future<void> _signOut() async {
+  Future<void> _signOut() async {
     try {
       await FirebaseAuth.instance.signOut();
       // Navigate back to the login page after logout
@@ -60,26 +63,57 @@ class _DashboardState extends State<Dashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-       appBar: AppBar(
-        title: Text('Dashboard'),
+      backgroundColor: Color.fromARGB(255, 239, 247, 255),
+      appBar: AppBar(
+        toolbarHeight: 100,
+        title: Shimmer.fromColors(
+            baseColor: Colors.white,
+            highlightColor: Colors.blue,
+            child: Text(
+              "Welcome",
+              style: GoogleFonts.dmSans(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            )
+            ),
         actions: [
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
-                const Icon(Icons.person),
+                const Icon(Icons.person, color: Colors.white),
                 const SizedBox(width: 5),
-                Text('$_firstName $_lastName'),
-                 const SizedBox(width: 5),
+                Text(
+                  '$_firstName $_lastName',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 5),
                 PopupMenuButton(
+                  color: Colors.white,
                   itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      child: Text('Profile'), // Profile menu item
+                      value: 'profile',
+                    ),
                     const PopupMenuItem(
                       child: Text('Logout'),
                       value: 'logout',
                     ),
                   ],
                   onSelected: (value) {
-                    if (value == 'logout') {
+                    if (value == 'profile') {
+                      // Redirect to profile page
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ProfilePage()),
+                      );
+                    } else if (value == 'logout') {
                       _signOut();
                     }
                   },
@@ -88,7 +122,7 @@ class _DashboardState extends State<Dashboard> {
             ),
           ),
         ],
-         flexibleSpace: Container(
+        flexibleSpace: Container(
           decoration: const BoxDecoration(
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(20),
@@ -97,7 +131,7 @@ class _DashboardState extends State<Dashboard> {
             gradient: LinearGradient(
               colors: [
                 Color.fromARGB(224, 14, 94, 253),
-                Color.fromARGB(196, 14, 94, 253),
+                Color.fromARGB(255, 4, 6, 126),
               ],
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
@@ -106,12 +140,12 @@ class _DashboardState extends State<Dashboard> {
         ),
       ),
       body: Container(
-        padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 2.0),
+        padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 2.0),
         child: GridView.count(
           crossAxisCount: 2,
           padding: EdgeInsets.all(3.0),
           children: <Widget>[
-            makeDashboardItem("Total", Icons.work, 'works'),
+            makeDashboardItem("Total Work", Icons.work, 'works'),
             makeDashboardItem("Complete", Icons.done, 'complete'),
             makeDashboardItem("On-progress", Icons.rebase_edit, 'on_progress'),
             makeDashboardItem("Cancel", Icons.clear, 'cancel'),
@@ -154,7 +188,7 @@ class _DashboardState extends State<Dashboard> {
 
             return InkWell(
               onTap: () {
-                if (title == "Total") {
+                if (title == "Total Work") {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => AllWork()),
@@ -167,12 +201,13 @@ class _DashboardState extends State<Dashboard> {
                 } else if (title == "On-progress") {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => FinishWorkPage()),
+                    MaterialPageRoute(builder: (context) => StaticPage()),
                   );
                 } else if (title == "Cancel") {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => NoStatusWorkPage()),
+                    MaterialPageRoute(
+                        builder: (context) => const NoStatusWorkPage()),
                   );
                 }
               },
@@ -192,8 +227,9 @@ class _DashboardState extends State<Dashboard> {
                   const SizedBox(height: 20.0),
                   Center(
                     child: Text(
-                      '$title\nCount: $itemCount',
-                      style: const TextStyle(fontSize: 18.0, color: Colors.black),
+                      '$title\n Count: $itemCount',
+                      style:
+                          const TextStyle(fontSize: 18.0, color: Colors.black),
                     ),
                   ),
                 ],

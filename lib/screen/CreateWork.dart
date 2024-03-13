@@ -8,11 +8,12 @@ import 'package:namyong_demo/Component/bottom_nav.dart';
 import 'package:namyong_demo/component/form_field.dart';
 import 'package:namyong_demo/model/Work.dart';
 import 'package:namyong_demo/screen/Notification.dart';
-import 'package:namyong_demo/screen/Timeline.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math';
 
 class CreateWorkPage extends StatefulWidget {
+  const CreateWorkPage({super.key});
+
   @override
   _CreateWorkPageState createState() => _CreateWorkPageState();
 }
@@ -21,13 +22,13 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
   final _formKey = GlobalKey<FormState>();
   final String? currentUserID = FirebaseAuth.instance.currentUser?.uid;
 
-  TextEditingController _dateController = TextEditingController();
-  TextEditingController _consigneeController = TextEditingController();
-  TextEditingController _vesselController = TextEditingController();
-  TextEditingController _voyController = TextEditingController();
-  TextEditingController _blNoController = TextEditingController();
-  TextEditingController _shippingController = TextEditingController();
-  TextEditingController _employeeIdController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _consigneeController = TextEditingController();
+  final TextEditingController _vesselController = TextEditingController();
+  final TextEditingController _voyController = TextEditingController();
+  final TextEditingController _blNoController = TextEditingController();
+  final TextEditingController _shippingController = TextEditingController();
+  final TextEditingController _employeeIdController = TextEditingController();
 
   List<String> employees = [];
   final ImagePicker _imagePicker = ImagePicker();
@@ -283,7 +284,10 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
 
     final String? currentUserID = FirebaseAuth.instance.currentUser?.uid;
 
-     String responsiblePerson = '$firstName $lastName';
+    String checkerID = _employeeIdController.text;
+
+
+    String responsiblePerson = '$firstName $lastName';
 
     // Upload the image to Firebase Storage
     String imageUrl = await uploadImageToFirebaseStorage(workID);
@@ -303,14 +307,20 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
             )
           : null,
       employeeId: _employeeIdController.text,
-      responsiblePerson: currentUserID ?? '',
+      responsiblePerson: responsiblePerson,
       imageUrl: imageUrl, // Set the imageUrl in the Work model
       statuses: ['NoStatus'], // Set the initial status as "NoStatus"
     );
 
     Map<String, dynamic> workData = work.toMap();
+    
 
-    await workCollection.add(workData);
+    // Explicitly set the document ID when adding to Firestore
+    await workCollection.doc(workID).set(workData);
+
+      await workCollection.doc(workID).update({
+      'checkerID': checkerID,
+    });
 
     print('Work data saved to Firestore successfully! WorkID: $workID');
 
@@ -325,11 +335,9 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
   Future<String> uploadImageToFirebaseStorage(String workID) async {
     try {
       if (_image == null) {
-        // If no image is selected, return an empty string
         return '';
       }
-
-      // Create a reference to the Firebase Storage location
+       // Create a reference to the Firebase Storage location
       Reference storageReference =
           FirebaseStorage.instance.ref().child('work_images/$workID.jpg');
 

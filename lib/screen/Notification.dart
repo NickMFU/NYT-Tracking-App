@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:namyong_demo/Component/bottom_nav.dart';
 import 'package:namyong_demo/screen/Timeline.dart';
 
@@ -78,7 +79,7 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
                 );
               },
             ),
-             bottomNavigationBar: BottomNavBar(
+      bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
         onTap: (int index) {
           setState(() {

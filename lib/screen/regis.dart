@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:namyong_demo/screen/Dashboard.dart';
 
@@ -12,6 +14,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  XFile? _profileImage;
 
   Future<void> _registerWithEmailAndPassword() async {
     try {
@@ -29,6 +32,7 @@ class _RegisterPageState extends State<RegisterPage> {
             user: userCredential.user,
             email: _emailController.text.trim(),
             password: _passwordController.text.trim(),
+            profileImage: _profileImage,
           ),
         ),
       );
@@ -40,6 +44,15 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       );
     }
+  }
+
+  Future<void> _pickProfilePicture() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+    setState(() {
+      _profileImage = image;
+    });
   }
 
   @override
@@ -54,6 +67,20 @@ class _RegisterPageState extends State<RegisterPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
+            _profileImage != null
+                ? CircleAvatar(
+                    radius: 50,
+                    backgroundImage: FileImage(File(_profileImage!.path)),
+                  )
+                : CircleAvatar(
+                    radius: 50,
+                    child: Icon(Icons.person),
+                  ),
+            SizedBox(height: 8),
+            TextButton(
+              onPressed: _pickProfilePicture,
+              child: Text('Select Profile Picture'),
+            ),
             TextField(
               controller: _emailController,
               decoration: InputDecoration(labelText: 'Email'),
@@ -80,8 +107,14 @@ class FillInfoPage extends StatefulWidget {
   final User? user;
   final String email;
   final String password;
+  final XFile? profileImage;
 
-  FillInfoPage({required this.user, required this.email, required this.password});
+  FillInfoPage({
+    required this.user,
+    required this.email,
+    required this.password,
+    required this.profileImage,
+  });
 
   @override
   _FillInfoPageState createState() => _FillInfoPageState();
@@ -105,6 +138,8 @@ class _FillInfoPageState extends State<FillInfoPage> {
           'Lastname': _lastNameController.text,
           'Role': _selectedRole,
           'Password': widget.password,
+          // Save profile image URL if available
+          'ProfileImageURL': widget.profileImage != null ? widget.profileImage!.path : null,
         });
 
         // Navigate to the dashboard after completing the profile
@@ -195,4 +230,3 @@ class _FillInfoPageState extends State<FillInfoPage> {
     );
   }
 }
-

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:namyong_demo/screen/Dashboard.dart';
 
@@ -12,8 +13,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
 
-  TextEditingController _idOrEmailController = TextEditingController();
-  TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _idOrEmailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void initState() {
@@ -35,10 +36,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('NYT-Tracking'),
-        centerTitle: true,
-      ),
+      backgroundColor: Color.fromARGB(255, 239, 247, 255),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -46,6 +44,7 @@ class _LoginPageState extends State<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              const SizedBox(height: 50.0),
               const Text(
                 'NYT-Tracking',
                 style: TextStyle(
@@ -56,9 +55,13 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16.0),
-              // Image Widget here
-              const SizedBox(height: 16.0),
+              const SizedBox(height: 30.0),
+              Image.asset(
+              'assets/images/login.jpg', // Replace with your actual image path
+              height: 200,
+              width: 100,
+            ),
+              const SizedBox(height: 30.0),
               Form(
                 key: _formKey,
                 child: Column(
@@ -86,10 +89,33 @@ class _LoginPageState extends State<LoginPage> {
                       },
                     ),
                     const SizedBox(height: 32.0),
-                    ElevatedButton(
-                      onPressed: _login,
-                      child: Text('Login'),
+                   Container(
+            width: MediaQuery.of(context).size.width *
+                0.6, // Adjust the width as needed
+            child: ElevatedButton(
+              onPressed: _login,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color.fromARGB(255, 4, 6, 126), // Background color
+              ),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.05,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child:
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text(
+                    "LOGIN",
+                    style: GoogleFonts.dmSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color.fromARGB(255, 255, 255, 255),
                     ),
+                  ),
+                ]),
+              ),
+            ),
+          ),
                   ],
                 ),
               ),
@@ -134,7 +160,7 @@ class _LoginPageState extends State<LoginPage> {
           // Navigate to the Dashboard
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => Dashboard()),
+            MaterialPageRoute(builder: (context) => const Dashboard()),
           );
         } else {
           // EmployeeID login

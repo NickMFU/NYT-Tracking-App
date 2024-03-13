@@ -49,11 +49,12 @@ dependencies:
   firebase_storage: ^11.5.0
   image_picker: ^1.0.4
   firebase_auth: ^4.13.0
-  flutter_svg: ^2.0.9
   firebase_messaging: ^14.7.16
   pdf: ^3.10.8
   open_file: ^3.3.2
   path_provider: ^2.1.2
+  shimmer: ^3.0.0
+  
   
 
 dev_dependencies:
@@ -66,6 +67,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_svg: ^2.0.9
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -109,3 +112,21 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/playstore-icon.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  web:
+    generate: true
+    image_path: "assets/images/playstore-icon.png"
+    background_color: "#hexcode"
+    theme_color: "#hexcode"
+  windows:
+    generate: true
+    image_path: "assets/images/playstore-icon.png"
+    icon_size: 48 # min:48, max:256, default: 48
+  macos:
+    generate: true
+    image_path: "assets/images/playstore-icon.png"

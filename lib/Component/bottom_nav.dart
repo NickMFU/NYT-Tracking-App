@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:namyong_demo/screen/Dashboard.dart';
 import 'package:namyong_demo/screen/CreateWork.dart';
 import 'package:namyong_demo/screen/Notification.dart';
-import 'package:namyong_demo/screen/notitest.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -52,7 +51,7 @@ class BottomNavBar extends StatelessWidget {
                               height: 48,
                               decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Color.fromARGB(224, 14, 94, 253),
+                                color: Color.fromARGB(255, 4, 6, 126),
                               ),
                               child: const Center(
                                 child: Icon(
@@ -65,7 +64,7 @@ class BottomNavBar extends StatelessWidget {
                           if (i != 1) // If it's not the 'CreateWork' item, show regular icon
                             Icon(
                               i == 0 ? Icons.home : Icons.notifications,
-                              color: i == currentIndex ? Color.fromARGB(224, 14, 94, 253) : Colors.black54,
+                              color: i == currentIndex ? Color.fromARGB(255, 4, 6, 126) : Colors.black54,
                               size: i == currentIndex ? 30 : 26,
                             ),
                           i == currentIndex
@@ -75,7 +74,7 @@ class BottomNavBar extends StatelessWidget {
                                   width: 22,
                                   decoration: const BoxDecoration(
                                     borderRadius: BorderRadius.all(Radius.circular(40)),
-                                    color: Color.fromARGB(224, 14, 94, 253),
+                                    color: Color.fromARGB(255, 4, 6, 126),
                                   ),
                                 )
                               : const SizedBox(),

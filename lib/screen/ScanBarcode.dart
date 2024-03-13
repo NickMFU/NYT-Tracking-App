@@ -1,19 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ScanBarcodePage extends StatefulWidget {
+  final String workID;
+
+  ScanBarcodePage({required this.workID});
+
   @override
   _ScanBarcodePageState createState() => _ScanBarcodePageState();
 }
 
 class _ScanBarcodePageState extends State<ScanBarcodePage> {
   List<String> _scannedBarcodes = [];
+  late CollectionReference _scanBarcodeCollection;
+  TextEditingController _tractorRegistrationController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scanBarcodeCollection = FirebaseFirestore.instance
+        .collection('Loadcar')
+        .doc(widget.workID)
+        .collection('Scanbarcode');
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Scan Barcode'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.save),
+            onPressed: _saveScannedBarcodes,
+          ),
+        ],
       ),
       body: Center(
         child: Column(
@@ -47,6 +69,14 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
                 },
               ),
             ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _tractorRegistrationController,
+              decoration: const InputDecoration(
+                labelText: 'Tractor Registration',
+                border: OutlineInputBorder(),
+              ),
+            ),
           ],
         ),
       ),
@@ -73,9 +103,41 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
     }
   }
 
+  void _saveScannedBarcodes() async {
+    try {
+      await Future.forEach(_scannedBarcodes, (barcode) async {
+        await _scanBarcodeCollection.add({
+          'barcode': barcode,
+          'tractorRegistration': _tractorRegistrationController.text,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Scanned barcodes saved successfully'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      print('Error saving barcodes: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to save scanned barcodes'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   void _deleteBarcode(int index) {
     setState(() {
       _scannedBarcodes.removeAt(index);
     });
+  }
+
+  @override
+  void dispose() {
+    _tractorRegistrationController.dispose();
+    super.dispose();
   }
 }

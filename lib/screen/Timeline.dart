@@ -70,10 +70,10 @@ class _TimelinePageState extends State<TimelinePage> {
     });
   }
 
-  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color.fromARGB(255, 239, 247, 255),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0.0,
@@ -83,7 +83,7 @@ class _TimelinePageState extends State<TimelinePage> {
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         flexibleSpace: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(20),
@@ -114,7 +114,8 @@ class _TimelinePageState extends State<TimelinePage> {
           ),
         ],
       ),
-      body: SingleChildScrollView( // Wrap with SingleChildScrollView
+      body: SingleChildScrollView(
+        // Wrap with SingleChildScrollView
         child: Padding(
           padding: const EdgeInsets.only(top: 20.0),
           child: Column(
@@ -176,7 +177,8 @@ class _TimelinePageState extends State<TimelinePage> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => ScanBarcodePage(),
+                                    builder: (context) =>
+                                        ScanBarcodePage(workID: widget.workID),
                                   ),
                                 );
                               },
@@ -191,17 +193,6 @@ class _TimelinePageState extends State<TimelinePage> {
                             ),
                         ],
                       ),
-                      onTap: () {
-                        if (index == 1 && !confirmedSteps[index]) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => RecordDamagePage(),
-                            ),
-                          );
-                        }
-                        // Add more conditions for other steps if needed
-                      },
                     ),
                   );
                 },
@@ -221,13 +212,15 @@ class _TimelinePageState extends State<TimelinePage> {
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      setState(() {
-                        confirmedSteps[currentStep] =
-                            !confirmedSteps[currentStep];
-                        currentStep = (currentStep + 1)
-                            .clamp(0, timelineEntries.length - 1);
-                        currentImagePath = imagePaths[currentStep];
-                        saveState();
+                      _showConfirmationDialog(() {
+                        setState(() {
+                          confirmedSteps[currentStep] =
+                              !confirmedSteps[currentStep];
+                          currentStep = (currentStep + 1)
+                              .clamp(0, timelineEntries.length - 1);
+                          currentImagePath = imagePaths[currentStep];
+                          saveState();
+                        });
                       });
                     },
                     style: ElevatedButton.styleFrom(
@@ -244,7 +237,32 @@ class _TimelinePageState extends State<TimelinePage> {
     );
   }
 
-  
+  void _showConfirmationDialog(Function confirmAction) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Confirmation'),
+          content: Text('Are you sure you want to confirm again?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog
+                confirmAction(); // Perform confirm action
+              },
+              child: Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void saveState() {
     _prefs.setInt('$uniqueTimelineKey-currentStep', currentStep);

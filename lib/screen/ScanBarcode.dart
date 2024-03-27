@@ -20,8 +20,8 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
   void initState() {
     super.initState();
     _scanBarcodeCollection = FirebaseFirestore.instance
-        .collection('Loadcar')
-        .doc(widget.workID)
+        .collection('works')
+        .doc(widget.workID) // Use workID as the document ID
         .collection('Scanbarcode');
   }
 
@@ -105,19 +105,28 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
 
   void _saveScannedBarcodes() async {
     try {
-      await Future.forEach(_scannedBarcodes, (barcode) async {
-        await _scanBarcodeCollection.add({
-          'barcode': barcode,
-          'tractorRegistration': _tractorRegistrationController.text,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
+      Map<String, dynamic> barcodesData = {};
+
+      _scannedBarcodes.asMap().forEach((index, barcode) {
+        barcodesData['barcode${index + 1}'] = barcode;
       });
+
+      barcodesData['tractorRegistration'] = _tractorRegistrationController.text;
+      barcodesData['timestamp'] = FieldValue.serverTimestamp();
+
+      await _scanBarcodeCollection.doc(widget.workID).set(barcodesData);
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Scanned barcodes saved successfully'),
           duration: Duration(seconds: 2),
         ),
       );
+
+      // Clear scanned barcodes after saving
+      setState(() {
+        _scannedBarcodes.clear();
+      });
     } catch (e) {
       print('Error saving barcodes: $e');
       ScaffoldMessenger.of(context).showSnackBar(

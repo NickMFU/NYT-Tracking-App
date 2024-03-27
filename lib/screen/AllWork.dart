@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:namyong_demo/model/Work.dart';
 import 'package:namyong_demo/screen/EditWork.dart';
 import 'package:namyong_demo/screen/Timeline.dart';
 
@@ -7,7 +8,7 @@ class AllWork extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 239, 247, 255),
+      backgroundColor: Color.fromARGB(255, 202, 228, 255),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0.0,
@@ -25,7 +26,7 @@ class AllWork extends StatelessWidget {
             gradient: LinearGradient(
               colors: [
                 Color.fromARGB(224, 14, 94, 253),
-                Color.fromARGB(196, 14, 94, 253),
+                Color.fromARGB(255, 4, 6, 126),
               ],
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
@@ -42,6 +43,14 @@ class WorkList extends StatelessWidget {
   final String status;
 
   WorkList({required this.status});
+
+  // Define colors for each status
+  final Map<String, Color> statusColors = {
+    'NoStatus': Colors.grey,
+    'Assigned': Colors.yellow,
+    'Cancel': Colors.red,
+    'Complete': Colors.green,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -63,26 +72,41 @@ class WorkList extends StatelessWidget {
             var workData = snapshot.data!.docs[index].data() as Map<String, dynamic>;
             String workID = snapshot.data!.docs[index].id;
 
+            // Create a Work instance from the document data
+            Work work = Work.fromMap(workData);
+
+            // Get the last status from the statuses list
+            String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
+
             // Check if all works should be displayed or filtered by status
-            if (status == 'All' || workData['Status'] == status) {
+            if (status == 'All' || lastStatus == status) {
               return Card(
                 margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
                 elevation: 4.0,
                 child: ListTile(
                   tileColor: Colors.white,
-                  title: Text('Work ID: ${workData['workID']}'),
-                  subtitle: Text('Date: ${workData['date']}'),
+                  title: Text('Work ID: ${work.workID}'),
+                  subtitle: Text('Date: ${work.date}'),
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => TimelinePage(workID: workData['workID']),
+                        builder: (context) => TimelinePage(workID: work.workID),
                       ),
                     );
                   },
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Colored dot representing status
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: statusColors[lastStatus], // Get the color based on the last status
+                        ),
+                      ),
                       IconButton(
                         icon: Icon(Icons.edit),
                         onPressed: () {

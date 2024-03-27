@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:namyong_demo/Component/form_field.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:namyong_demo/screen/Dashboard.dart';
 
@@ -15,6 +16,7 @@ class _LoginPageState extends State<LoginPage> {
 
   final TextEditingController _idOrEmailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isPasswordVisible = false;
 
   @override
   void initState() {
@@ -36,7 +38,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color.fromARGB(255, 239, 247, 255),
+      backgroundColor: const Color.fromARGB(255, 239, 247, 255),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -50,72 +52,152 @@ class _LoginPageState extends State<LoginPage> {
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Colors.blue,
+                  color: Color.fromARGB(255, 4, 6, 126),
                   fontFamily: 'Righteous',
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 30.0),
               Image.asset(
-              'assets/images/login.jpg', // Replace with your actual image path
-              height: 200,
-              width: 100,
-            ),
+                'assets/images/login.jpg', // Replace with your actual image path
+                height: 200,
+                width: 100,
+              ),
               const SizedBox(height: 30.0),
               Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    TextFormField(
-                      controller: _idOrEmailController,
-                      decoration: InputDecoration(labelText: 'EmployeeID or Email'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your EmployeeID or Email';
-                        }
-                        return null;
-                      },
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Email',
+                          style: TextStyle(
+                            color: Color.fromARGB(255, 4, 6, 126),
+                            fontSize: 18.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 2.0, horizontal: 30.0),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFedf0f8),
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(
+                                color: Color.fromARGB(255, 4, 6, 126),
+                                width: 2),
+                          ),
+                          child: TextFormField(
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please Enter E-mail';
+                              }
+                              return null;
+                            },
+                            controller: _idOrEmailController,
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              hintText: "Email",
+                              hintStyle: TextStyle(
+                                color: Color(0xFFb2b7bf),
+                                fontSize: 18.0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16.0),
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: InputDecoration(labelText: 'Password'),
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        return null;
-                      },
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Password', // Text above the container
+                          style: TextStyle(
+                            color: Color.fromARGB(255, 4, 6, 126), // Text color
+                            fontSize: 18.0, // Text size
+                            fontWeight: FontWeight.bold, // Text weight
+                          ),
+                        ),
+                        const SizedBox(
+                            height: 10), // Spacer between text and container
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 2.0, horizontal: 30.0),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFedf0f8),
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(
+                              color: Color.fromARGB(255, 4, 6, 126),
+                              width: 2,
+                            ), // Blue border
+                          ),
+                          child: TextFormField(
+                            controller: _passwordController,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please Enter Password';
+                              }
+                              return null;
+                            },
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: "Password",
+                              hintStyle: TextStyle(
+                                  color: Color(0xFFb2b7bf), fontSize: 18.0),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _isPasswordVisible
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                  color: Color.fromARGB(255, 4, 6, 126),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isPasswordVisible = !_isPasswordVisible;
+                                  });
+                                },
+                              ),
+                            ),
+                            obscureText:
+                                !_isPasswordVisible, // Toggle password visibility
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 32.0),
-                   Container(
-            width: MediaQuery.of(context).size.width *
-                0.6, // Adjust the width as needed
-            child: ElevatedButton(
-              onPressed: _login,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color.fromARGB(255, 4, 6, 126), // Background color
-              ),
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.05,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child:
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text(
-                    "LOGIN",
-                    style: GoogleFonts.dmSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color.fromARGB(255, 255, 255, 255),
+                    Container(
+                      width: MediaQuery.of(context).size.width *
+                          0.6, // Adjust the width as needed
+                      child: ElevatedButton(
+                        onPressed: _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color.fromARGB(
+                              255, 4, 6, 126), // Background color
+                        ),
+                        child: Container(
+                          height: MediaQuery.of(context).size.height * 0.05,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "LOGIN",
+                                  style: GoogleFonts.dmSans(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color.fromARGB(255, 255, 255, 255),
+                                  ),
+                                ),
+                              ]),
+                        ),
+                      ),
                     ),
-                  ),
-                ]),
-              ),
-            ),
-          ),
                   ],
                 ),
               ),
@@ -144,7 +226,8 @@ class _LoginPageState extends State<LoginPage> {
         // Check if the input is an email
         if (idOrEmail.contains('@')) {
           // Email login
-          UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+          UserCredential userCredential =
+              await FirebaseAuth.instance.signInWithEmailAndPassword(
             email: idOrEmail,
             password: password,
           );

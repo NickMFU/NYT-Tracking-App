@@ -1,5 +1,3 @@
-// In your main.dart or a dedicated service file
-
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationService {
@@ -7,7 +5,6 @@ class NotificationService {
     await FirebaseMessaging.instance.requestPermission();
     String? token = await FirebaseMessaging.instance.getToken();
     print('FCM Token: $token');
-    // Send the token to your server to associate it with the user (checker)
   }
 
   static void onMessageReceived(RemoteMessage message) {
@@ -23,3 +20,5 @@ class NotificationService {
     print('Notification tapped: $message');
   }
 }
+
+

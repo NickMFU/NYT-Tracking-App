@@ -1,16 +1,6 @@
 import 'package:flutter/material.dart';
-
-class UserStatistics {
-  final String month;
-  final int numberOfTasksCompleted;
-  final int hoursWorked;
-
-  UserStatistics({
-    required this.month,
-    required this.numberOfTasksCompleted,
-    required this.hoursWorked,
-  });
-}
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class StaticPage extends StatefulWidget {
   @override
@@ -18,47 +8,80 @@ class StaticPage extends StatefulWidget {
 }
 
 class _StaticPageState extends State<StaticPage> {
-  late List<UserStatistics> _userStats;
+  List<Work> works = [];
 
   @override
   void initState() {
     super.initState();
-    // Fetch user statistics from Firestore or any other data source
-    _userStats = _fetchUserStatistics();
+    fetchData();
   }
 
-  List<UserStatistics> _fetchUserStatistics() {
-    // Implement code to fetch user statistics from Firestore or any other data source
-    // This is just a mock example, replace it with your actual implementation
-    return [
-      UserStatistics(month: 'January', numberOfTasksCompleted: 10, hoursWorked: 50),
-      UserStatistics(month: 'February', numberOfTasksCompleted: 15, hoursWorked: 60),
-      UserStatistics(month: 'March', numberOfTasksCompleted: 20, hoursWorked: 70),
-      // Add more data for other months as needed
-    ];
+  Future<void> fetchData() async {
+    try {
+      QuerySnapshot snapshot =
+          await FirebaseFirestore.instance.collection('works').get();
+      works = snapshot.docs.map((doc) => Work.fromSnapshot(doc)).toList();
+      setState(() {}); // Update the state to rebuild the UI
+    } catch (e) {
+      print('Error fetching data: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('User Statistics'),
+        title: Text('Works by Month'),
       ),
-      body: ListView.builder(
-        itemCount: _userStats.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text('Month: ${_userStats[index].month}'),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Tasks Completed: ${_userStats[index].numberOfTasksCompleted}'),
-                Text('Hours Worked: ${_userStats[index].hoursWorked}'),
-              ],
-            ),
-          );
-        },
+      body: Center(
+        child: works.isNotEmpty
+            ? PieChart(
+                PieChartData(
+                  sections: _generateSections(),
+                ),
+              )
+            : CircularProgressIndicator(),
       ),
+    );
+  }
+
+  List<PieChartSectionData> _generateSections() {
+    Map<int, int> worksByMonth = {};
+    works.forEach((work) {
+      try {
+        DateTime date = DateTime.parse(work.date);
+        int month = date.month;
+        worksByMonth[month] = (worksByMonth[month] ?? 0) + 1;
+      } catch (e) {
+        print('Error parsing date: $e');
+      }
+    });
+
+    return worksByMonth.entries.map((entry) {
+      return PieChartSectionData(
+        value: entry.value.toDouble(),
+        title: '${entry.key}',
+        color: _getRandomColor(),
+        radius: 100,
+      );
+    }).toList();
+  }
+
+  Color _getRandomColor() {
+    return Color((0xFF000000 & DateTime.now().millisecondsSinceEpoch) |
+        0xFF000000);
+  }
+}
+
+class Work {
+  final String date;
+
+  Work({required this.date});
+
+  factory Work.fromSnapshot(DocumentSnapshot snapshot) {
+    Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+    return Work(
+      date: data['date'] ?? '',
     );
   }
 }

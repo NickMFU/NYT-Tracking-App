@@ -1,34 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:namyong_demo/Component/bottom_nav.dart';
+import 'package:namyong_demo/model/Work.dart';
 import 'package:namyong_demo/screen/Timeline.dart';
 
 class AcceptWorkPage extends StatefulWidget {
-  final String createdWorkID;
-
-  AcceptWorkPage({required this.createdWorkID});
-
   @override
   _AcceptWorkPageState createState() => _AcceptWorkPageState();
 }
 
 class _AcceptWorkPageState extends State<AcceptWorkPage> {
-  List<String> works = []; // Placeholder for created works
+  late Stream<QuerySnapshot> _worksStream;
 
   @override
   void initState() {
     super.initState();
-    // Fetch the list of created works
-    fetchWorks();
+    _worksStream = _fetchWorks();
   }
 
-  // Method to fetch created works (placeholder for demonstration)
-  void fetchWorks() {
-    // Assuming you have a method to fetch works from a database or storage
-    // For demonstration, I'll add the created work ID to the list
-    setState(() {
-      works = [widget.createdWorkID];
-    });
+  Stream<QuerySnapshot> _fetchWorks() {
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser != null) {
+    final currentUserID = currentUser.uid;
+    return FirebaseFirestore.instance
+        .collection('works')
+        .where('statuses', arrayContains: 'NoStatus')
+        .snapshots();
+  } else {
+    // Handle if user is not authenticated
+    return Stream.empty();
+  }
+}
+
+  Future<String> _getCheckerFirstName(String checkerID) async {
+    final DocumentSnapshot employeeDoc = await FirebaseFirestore.instance
+        .collection('Employee')
+        .doc(checkerID)
+        .get();
+    return employeeDoc['Firstname'] ?? '';
   }
 
   @override
@@ -36,49 +46,45 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
     int _currentIndex = 2;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0.0,
-        toolbarHeight: 100,
-        title: const Text(
-          "All Work",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-            gradient: LinearGradient(
-              colors: [
-                Color.fromARGB(224, 14, 94, 253),
-                Color.fromARGB(196, 14, 94, 253),
-              ],
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-            ),
-          ),
-        ),
+        title: Text('Accept Work'),
       ),
-      body: works.isEmpty
-          ? Center(
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _worksStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Error: ${snapshot.error}'),
+            );
+          }
+          final works = snapshot.data?.docs ?? [];
+          if (works.isEmpty) {
+            return Center(
               child: Text('No works available'),
-            )
-          : ListView.builder(
-              itemCount: works.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(works[index]),
-                  trailing: IconButton(
-                    icon: Icon(Icons.check),
-                    onPressed: () {
-                      // Accept the work and navigate to the TimelinePage
-                      acceptWork(works[index]);
-                    },
-                  ),
-                );
-              },
-            ),
+            );
+          }
+          return ListView.builder(
+            itemCount: works.length,
+            itemBuilder: (context, index) {
+              final work =
+                  Work.fromMap(works[index].data() as Map<String, dynamic>);
+              return Card(
+                // Provide a unique key for each ListTile
+                key: ValueKey(work.workID),
+                child: ListTile(
+                  title: Text(work.blNo),
+                  subtitle: Text('Consignee: ${work.consignee}'),
+                  onTap: () => _showWorkDialog(work),
+                ),
+              );
+            },
+          );
+        },
+      ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
         onTap: (int index) {
@@ -90,14 +96,63 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
     );
   }
 
-  // Method to accept the work
-  void acceptWork(String work) {
-    // Navigate to the TimelinePage for the selected work
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TimelinePage(workID: work),
-      ),
+  Future<void> _showWorkDialog(Work work) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Accept Work'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Do you want to accept this work?'),
+                SizedBox(height: 20),
+                Text('BL No: ${work.blNo}'),
+                Text('Consignee: ${work.consignee}'),
+                Text('Vessel: ${work.vessel}'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Accept'),
+              onPressed: () {
+                _updateWorkStatus(work);
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
     );
   }
+
+  Future<void> _updateWorkStatus(Work work) async {
+    try {
+      final currentUserID = FirebaseAuth.instance.currentUser?.uid;
+      final workRef =
+          FirebaseFirestore.instance.collection('works').doc(work.workID);
+      await workRef.update({
+        'statuses': FieldValue.arrayRemove(['NoStatus']),
+        'statuses': FieldValue.arrayUnion(['Accepted']),
+        'acceptedBy': currentUserID,
+      });
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TimelinePage(workID: work.workID),
+        ),
+      );
+    } catch (e) {
+      print('Error updating work status: $e');
+    }
+  }
 }
+

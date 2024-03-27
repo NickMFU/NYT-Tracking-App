@@ -56,7 +56,7 @@ class DefaultFormField extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
               border: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.blue, width: 2.0), // Set blue border here
+                borderSide: const BorderSide(color: Color.fromARGB(255, 28, 0, 154), width: 2.0), // Set blue border here
                 borderRadius: BorderRadius.circular(12),
               ),
               prefixIcon: prefixWidget,
@@ -80,7 +80,7 @@ class DefaultFormField extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
               border: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.blue, width: 2.0), // Set blue border here
+                borderSide: const BorderSide(color: Colors.blue, width: 2.0), // Set blue border here
                 borderRadius: BorderRadius.circular(12),
               ),
               prefixIcon: prefixWidget,

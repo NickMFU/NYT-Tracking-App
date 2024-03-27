@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:namyong_demo/screen/Dashboard.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -15,6 +16,18 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   XFile? _profileImage;
+
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance; // Define FirebaseMessaging instance
+
+  @override
+  void initState() {
+    super.initState();
+    _firebaseMessaging.getToken().then((token) {
+      print('Device Token: $token');
+      // Save token to Firestore or send it to your server
+      // Here, you can call a function to save the token to Firestore
+    });
+  }
 
   Future<void> _registerWithEmailAndPassword() async {
     try {
@@ -108,6 +121,7 @@ class FillInfoPage extends StatefulWidget {
   final String email;
   final String password;
   final XFile? profileImage;
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance; // Define FirebaseMessaging instance here
 
   FillInfoPage({
     required this.user,
@@ -125,8 +139,9 @@ class _FillInfoPageState extends State<FillInfoPage> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   String _selectedRole = '';
-
-  void _saveUserInfo() async {
+  
+  // Function to save user info
+  void _saveUserInfo(String deviceToken) async {
     try {
       // Check if a user is logged in
       if (widget.user != null) {
@@ -138,8 +153,10 @@ class _FillInfoPageState extends State<FillInfoPage> {
           'Lastname': _lastNameController.text,
           'Role': _selectedRole,
           'Password': widget.password,
+          'DeviceToken': deviceToken, // Store device token
           // Save profile image URL if available
           'ProfileImageURL': widget.profileImage != null ? widget.profileImage!.path : null,
+          
         });
 
         // Navigate to the dashboard after completing the profile
@@ -221,7 +238,12 @@ class _FillInfoPageState extends State<FillInfoPage> {
             ),
             SizedBox(height: 16.0),
             ElevatedButton(
-              onPressed: _saveUserInfo,
+              onPressed: () {
+                // Obtain device token again and save user info
+                widget._firebaseMessaging.getToken().then((deviceToken) {
+                  _saveUserInfo(deviceToken ?? '');
+                });
+              },
               child: Text('Save Information'),
             ),
           ],
@@ -230,3 +252,4 @@ class _FillInfoPageState extends State<FillInfoPage> {
     );
   }
 }
+

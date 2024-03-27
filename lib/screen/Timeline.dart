@@ -1,9 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:namyong_demo/screen/RecordDamage.dart';
 import 'package:namyong_demo/screen/ScanBarcode.dart';
 import 'package:namyong_demo/screen/WorkDetailScreen.dart';
+import 'package:namyong_demo/screen/summay_work.dart';
+import 'package:namyong_demo/service/constants.dart';
 import 'package:timeline_tile/timeline_tile.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class TimelinePage extends StatefulWidget {
   final String workID;
@@ -15,63 +18,67 @@ class TimelinePage extends StatefulWidget {
 }
 
 class _TimelinePageState extends State<TimelinePage> {
-  late SharedPreferences _prefs;
-  late String uniqueTimelineKey;
-  List<bool> confirmedSteps = List.filled(5, false);
-  List<TimelineEntry> timelineEntries = [
-    TimelineEntry(
-      title: 'Assigned',
-      content: 'Task assigned to a user.',
-    ),
-    TimelineEntry(
-      title: 'During Checker Survey',
-      content: 'Survey in progress by a checker',
-    ),
-    TimelineEntry(
-      title: 'Load to Tractor',
-      content: 'Loading the task onto a tractor.',
-    ),
-    TimelineEntry(
-      title: 'During Gate Out Confirm',
-      content: 'Confirmation during gate out.',
-    ),
-    TimelineEntry(
-      title: 'Product Release Complete',
-      content: 'Product release process completed.',
-    ),
-  ];
-  List<String> imagePaths = [
-    'assets/images/undraw_Add_tasks_re_s5yj.png',
-    'assets/images/43025 2.png',
-    'assets/images/43025 1.png',
-    'assets/images/undraw_approve_qwp7.png',
-    'assets/images/1.jpg',
-  ];
-  int currentStep = 0;
-  String currentImagePath = '';
+  late CollectionReference _timelineRef;
+  late Stream<DocumentSnapshot> _timelineStream;
+  late List<bool> confirmedSteps;
+  late int currentStep;
+  late List<TimelineEntry> timelineEntries;
+  late List<String> imagePaths;
+  late String currentImagePath;
 
   @override
   void initState() {
     super.initState();
-    uniqueTimelineKey = 'timeline-${widget.workID}';
+    _timelineRef = FirebaseFirestore.instance.collection('timelines');
+    _timelineStream = _timelineRef.doc(widget.workID).snapshots();
+    timelineEntries = [
+      TimelineEntry(
+        title: 'Assigned',
+        content: 'Task assigned to a user.',
+      ),
+      TimelineEntry(
+        title: 'During Checker Survey',
+        content: 'Survey in progress by a checker',
+      ),
+      TimelineEntry(
+        title: 'Load to Tractor',
+        content: 'Loading the task onto a tractor.',
+      ),
+      TimelineEntry(
+        title: 'During Gate Out Confirm',
+        content: 'Confirmation during gate out.',
+      ),
+      TimelineEntry(
+        title: 'Product Release Complete',
+        content: 'Product release process completed.',
+      ),
+    ];
+    imagePaths = [
+      'assets/images/undraw_Add_tasks_re_s5yj.png',
+      'assets/images/43025 2.png',
+      'assets/images/43025 1.png',
+      'assets/images/Animation - 1710742336521 (1).gif',
+      'assets/images/1.jpg',
+    ];
+    currentStep = 0;
     currentImagePath = imagePaths[0];
-    initSharedPreferences();
-  }
-
-  void initSharedPreferences() async {
-    _prefs = await SharedPreferences.getInstance();
-    setState(() {
-      currentStep = _prefs.getInt('$uniqueTimelineKey-currentStep') ?? 0;
-      confirmedSteps = List.generate(5, (index) {
-        return _prefs.getBool('$uniqueTimelineKey-confirmedStep$index') ??
-            false;
-      });
-      currentImagePath = imagePaths[currentStep];
+    confirmedSteps = List.filled(timelineEntries.length, false);
+    _timelineStream.listen((snapshot) {
+      if (snapshot.exists) {
+        Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+        setState(() {
+          currentStep = data['currentStep'] ?? 0;
+          confirmedSteps = List<bool>.from(data['confirmedSteps'] ?? []);
+          currentImagePath = imagePaths[currentStep];
+        });
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    bool allStepsConfirmed = confirmedSteps.every((step) => step);
+    bool isLastStep = currentStep == timelineEntries.length - 1;
     return Scaffold(
       backgroundColor: Color.fromARGB(255, 239, 247, 255),
       appBar: AppBar(
@@ -91,7 +98,7 @@ class _TimelinePageState extends State<TimelinePage> {
             gradient: LinearGradient(
               colors: [
                 Color.fromARGB(224, 14, 94, 253),
-                Color.fromARGB(196, 14, 94, 253),
+                Color.fromARGB(255, 4, 6, 126),
               ],
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
@@ -115,7 +122,6 @@ class _TimelinePageState extends State<TimelinePage> {
         ],
       ),
       body: SingleChildScrollView(
-        // Wrap with SingleChildScrollView
         child: Padding(
           padding: const EdgeInsets.only(top: 20.0),
           child: Column(
@@ -158,7 +164,7 @@ class _TimelinePageState extends State<TimelinePage> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => RecordDamagePage(),
+                                    builder: (context) => RecordDamagePage(workID: widget.workID),
                                   ),
                                 );
                               },
@@ -186,50 +192,65 @@ class _TimelinePageState extends State<TimelinePage> {
                                 children: [
                                   Icon(Icons.add, color: Colors.blue),
                                   SizedBox(width: 8),
-                                  Text('Load',
+                                  Text('Load to tractor',
                                       style: TextStyle(color: Colors.blue)),
                                 ],
                               ),
-                            ),
+                            )
                         ],
                       ),
                     ),
                   );
                 },
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      print('Cancel button pressed');
-                      resetTimeline();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+              if (!allStepsConfirmed)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: resetTimeline,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      child: Text('Cancel'),
                     ),
-                    child: Text('Cancel'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      _showConfirmationDialog(() {
-                        setState(() {
-                          confirmedSteps[currentStep] =
-                              !confirmedSteps[currentStep];
-                          currentStep = (currentStep + 1)
-                              .clamp(0, timelineEntries.length - 1);
-                          currentImagePath = imagePaths[currentStep];
-                          saveState();
-                        });
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                    ElevatedButton(
+                      onPressed: () {
+                        confirmStep();
+                        if (timelineEntries[currentStep].title ==
+                            'During Gate Out Confirm') {
+                          sendNotificationToGateOut();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      child: Text('Confirm'),
                     ),
-                    child: Text('Confirm'),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              if (allStepsConfirmed && isLastStep)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => Summarywork(
+                              workID: widget.workID,
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      child: Text('Check Summary'),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),
@@ -237,46 +258,83 @@ class _TimelinePageState extends State<TimelinePage> {
     );
   }
 
-  void _showConfirmationDialog(Function confirmAction) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Confirmation'),
-          content: Text('Are you sure you want to confirm again?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close the dialog
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close the dialog
-                confirmAction(); // Perform confirm action
-              },
-              child: Text('Confirm'),
-            ),
-          ],
-        );
-      },
-    );
+  void confirmStep() async {
+    // Get the currently logged-in user
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      String employeeID = user.uid; // Assuming UID is used as EmployeeID
+      setState(() {
+        confirmedSteps[currentStep] = true;
+        if (currentStep == timelineEntries.length - 1) {
+          changeWorkStatus("Complete");
+          addGateOutField(employeeID);
+        } else if (currentStep == 0) {
+          changeWorkStatus("Assigned");
+        }
+        currentStep = (currentStep + 1).clamp(0, timelineEntries.length - 1);
+        currentImagePath = imagePaths[currentStep];
+        saveState();
+      });
+    } else {
+      print('No user logged in.');
+      // Handle the case where no user is logged in
+    }
   }
 
-  void saveState() {
-    _prefs.setInt('$uniqueTimelineKey-currentStep', currentStep);
-    for (int i = 0; i < confirmedSteps.length; i++) {
-      _prefs.setBool('$uniqueTimelineKey-confirmedStep$i', confirmedSteps[i]);
+  
+
+  void addGateOutField(String employeeID) async {
+    try {
+      DocumentSnapshot employeeSnapshot = await FirebaseFirestore.instance
+          .collection('Employee')
+          .doc(employeeID)
+          .get();
+
+      if (employeeSnapshot.exists) {
+        String gateOutEmployeeID = employeeSnapshot['EmployeeID'];
+        DocumentReference workRef =
+            FirebaseFirestore.instance.collection('works').doc(widget.workID);
+        await workRef.update({'Gate out': gateOutEmployeeID});
+        print('Added "Gate out" field with value: $gateOutEmployeeID');
+      } else {
+        print('Employee document does not exist for ID: $employeeID');
+        // Handle the case where employee document does not exist
+      }
+    } catch (e) {
+      print('Error adding "Gate out" field: $e');
     }
   }
 
   void resetTimeline() {
     setState(() {
-      confirmedSteps = List.filled(5, false);
-      currentStep = 0;
-      currentImagePath = imagePaths[0];
+      changeWorkStatus("Cancel");
       saveState();
+    });
+  }
+
+  void changeWorkStatus(String newStatus) async {
+    try {
+      // Get the reference to the work document
+      DocumentReference workRef =
+          FirebaseFirestore.instance.collection('works').doc(widget.workID);
+      // Get the current statuses array
+      DocumentSnapshot workSnapshot = await workRef.get();
+      Map<String, dynamic> data = workSnapshot.data() as Map<String, dynamic>;
+      List<dynamic> currentStatuses = data['statuses'] ?? [];
+      // Add the new status to the array
+      List<dynamic> updatedStatuses = [...currentStatuses, newStatus];
+      // Update the statuses field with the updated array
+      await workRef.update({'statuses': updatedStatuses});
+      print('Work status updated to $newStatus');
+    } catch (e) {
+      print('Error updating work status: $e');
+    }
+  }
+
+  void saveState() async {
+    await _timelineRef.doc(widget.workID).set({
+      'confirmedSteps': confirmedSteps,
+      'currentStep': currentStep,
     });
   }
 }

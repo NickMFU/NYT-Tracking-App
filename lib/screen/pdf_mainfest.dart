@@ -1,178 +1,169 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:open_file/open_file.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:pdf/pdf.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:flutter/services.dart' show ByteData, rootBundle;
+import 'package:pdf/pdf.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
 
-class Statement {
-  final String name;
-  final String phone;
-  final String email;
-  final String month;
-  final String year;
-  final double totalEarning;
-  final double movingCost;
-  final double travelCost;
-  final double serviceFee;
-  final double gst;
-  final double tips;
-  final double refund;
-  final int numberOfJobs;
+class PDFPage extends StatelessWidget {
+  final Map<String, dynamic> workData;
 
-  Statement({
-    required this.name,
-    required this.phone,
-    required this.email,
-    required this.month,
-    required this.year,
-    required this.totalEarning,
-    required this.movingCost,
-    required this.travelCost,
-    required this.serviceFee,
-    required this.gst,
-    required this.tips,
-    required this.refund,
-    required this.numberOfJobs,
-  });
-}
-
-class MyWidget extends StatelessWidget {
-  final Statement statement;
-
-  MyWidget({required this.statement});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      // Your widget structure here
-    );
-  }
-}
-
-class MyPage extends StatelessWidget {
-  final Statement statement;
-
-  MyPage({required this.statement});
+  PDFPage({required this.workData});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('PDF Preview'),
+      ),
       body: Center(
         child: ElevatedButton(
           onPressed: () {
-            _printScreen(context, statement);
+            generateAndOpenPDF(workData, context);
           },
-          child: Text('Print PDF'),
+          child: Text('Generate PDF'),
         ),
       ),
     );
   }
 
-  void _printScreen(BuildContext context, Statement statement) async {
-    Directory? directory;
-    final ByteData fontData =
-        await rootBundle.load('assets/fonts/Outfit/static/Outfit-Regular.ttf');
-    final ttf = pw.Font.ttf(fontData.buffer.asByteData());
-    final image = pw.MemoryImage(
-      (await rootBundle.load('assets/images/logo_text.png'))
-          .buffer
-          .asUint8List(),
-    );
+  Future<void> generateAndOpenPDF(
+      Map<String, dynamic> workData, BuildContext context) async {
+    final pdf = pw.Document();
 
-    try {
-      final doc = pw.Document();
-      doc.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          build: (pw.Context context) {
-            return pw.ListView(
-              children: [
-                pw.Container(
-                  padding: pw.EdgeInsets.fromLTRB(10, 0, 10, 0),
+    // Load the logo image as a PDF image
+    final Uint8List logoImage =
+        (await rootBundle.load('assets/images/playstore-icon.png'))
+            .buffer
+            .asUint8List();
+
+    final ByteData fontData =
+        await rootBundle.load('assets/fonts/THSarabunNew Bold.ttf');
+    final ttf = pw.Font.ttf(fontData.buffer.asByteData());
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header section
+             pw.Row(
+  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+  children: [
+    // Logo
+    pw.Image(
+      pw.MemoryImage(logoImage),
+      width: 150,
+      height: 100,
+    ),
+    // Spacer to create space between logo and Lorem Ipsum text
+    
+    // Lorem Ipsum text
+    pw.Container(
+      width: 400, // Adjust width as needed
+      child: pw.Text(
+        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam.',
+        style: pw.TextStyle(fontSize: 12), // Adjust font size as needed
+      ),
+    ),
+  ],
+),
+              
+              pw.SizedBox(height: 20),
+              pw.Divider(),
+
+              // Title and other header content
+              pw.Center(
+                child: pw.Container(
+                  width: 300,
+                  decoration: const pw.BoxDecoration(),
+                  padding: pw.EdgeInsets.all(10),
                   child: pw.Column(
-                    mainAxisAlignment: pw.MainAxisAlignment.start,
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    mainAxisAlignment: pw.MainAxisAlignment
+                        .center, // Align the text to the center
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
                     children: [
-                      pw.Image(
-                        image,
-                        width: 120,
-                        fit: pw.BoxFit.contain,
-                      ),
-                      pw.SizedBox(height: 50),
                       pw.Text(
-                        "${statement.name}",
-                        style: pw.TextStyle(font: ttf),
+                        'ใบกำกับสินค้า (Cargo Delivery)',
+                        style:  pw.TextStyle(
+                          font: ttf,
+                          fontSize: 30,
+                          color: PdfColors.black,
+                        ),
                       ),
-                      pw.Text(
-                        "${statement.phone}",
-                        style: pw.TextStyle(font: ttf),
-                      ),
-                      pw.Text(
-                        "${statement.email}",
-                        style: pw.TextStyle(font: ttf),
-                      ),
-                      // Add more text widgets as needed
+                       
                     ],
                   ),
                 ),
-              ],
-            );
-          },
-        ),
-      );
+              ),
 
-      if (Platform.isIOS) {
-        directory = await getApplicationDocumentsDirectory();
-      } else {
-        directory = await getDownloadsDirectory();
-      }
+              pw.SizedBox(height: 10),
+              pw.Divider(),
 
-      if (directory == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Document directory not available"),
-          ),
-        );
-        return;
-      }
+              pw.Container(
+                width: 500,
+                decoration: const pw.BoxDecoration(
+                  color: PdfColors.white,
+                ),
+                padding: pw.EdgeInsets.all(10),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                     pw.Text(
+                      'Consignee:......${workData['consignee']}...... Vessel:......${workData['vessel']} ......Voy:......${workData['voy']}...... Date:......${workData['date']}...',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        color: PdfColors.black,
+                      ),
+                    ),
+                    pw.Text(
+                      'BL/No: ..........${workData['blNo']}..........  Shipping: ..........${workData['shipping']}..........',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        color: PdfColors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-      String path = directory.path;
-      String myFile =
-          '${path}/Tingsapp-statement-${statement.month}-${statement.year}.pdf';
-      final file = File(myFile);
-      await file.writeAsBytes(await doc.save());
-      OpenFile.open(myFile);
-    } catch (e) {
-      debugPrint("$e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("$e"),
-        ),
-      );
-    }
-  }
-}
+              pw.Table.fromTextArray(
+                border: null,
+                headerDecoration: pw.BoxDecoration(
+                  color: PdfColors.blue,
+                ),
+                cellAlignment: pw.Alignment.centerLeft,
+                headerAlignment: pw.Alignment.centerLeft,
+                headerHeight: 30,
+                headers: ['Mark', 'Pkgs', 'Description', 'Remark'],
+                data: [
+                  ['1', '5', 'Description 1', 'Remark 1'],
+                  ['2', '10', 'Description 2', 'Remark 2'],
+                  ['3', '15', 'Description 3', 'Remark 3'],
+                ],
+              ),
 
-void main() {
-  runApp(MaterialApp(
-    home: MyPage(
-      statement: Statement(
-        name: 'John Doe',
-        phone: '123-456-7890',
-        email: 'john.doe@example.com',
-        month: 'January',
-        year: '2024',
-        totalEarning: 1500.0,
-        movingCost: 200.0,
-        travelCost: 100.0,
-        serviceFee: 300.0,
-        gst: 50.0,
-        tips: 100.0,
-        refund: 0.0,
-        numberOfJobs: 10,
+              // Footer section
+              pw.Divider(),
+              pw.SizedBox(height: 20),
+              pw.Text('Footer Line 1'),
+              pw.Text('Footer Line 2'),
+              pw.Text('Footer Line 3'),
+              pw.Text('Footer Line 4'),
+            ],
+          );
+        },
       ),
-    ),
-  ));
+    );
+
+    final output = await getTemporaryDirectory();
+    final file = File('${output.path}/work_details_${workData['workID']}.pdf');
+    await file.writeAsBytes(await pdf.save());
+
+    OpenFile.open(file.path);
+  }
 }

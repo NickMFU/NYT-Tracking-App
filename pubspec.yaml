@@ -54,6 +54,11 @@ dependencies:
   open_file: ^3.3.2
   path_provider: ^2.1.2
   shimmer: ^3.0.0
+  http: ^1.2.1
+  flutter_local_notifications: ^17.0.0
+  fl_chart: ^0.66.2
+  lottie: ^3.1.0
+  intl: ^0.17.0
   
   
 
@@ -87,6 +92,8 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/images/
+    - assets/lottie/
+    - assets/fonts/
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 
@@ -116,17 +123,17 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images/playstore-icon.png"
+  image_path: "assets/images/icon-192.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
   web:
     generate: true
-    image_path: "assets/images/playstore-icon.png"
+    image_path: "assets/images/play_store_512.png"
     background_color: "#hexcode"
     theme_color: "#hexcode"
   windows:
     generate: true
-    image_path: "assets/images/playstore-icon.png"
+    image_path: "assets/images/play_store_512.png"
     icon_size: 48 # min:48, max:256, default: 48
   macos:
     generate: true
-    image_path: "assets/images/playstore-icon.png"
+    image_path: "assets/images/play_store_512.png"

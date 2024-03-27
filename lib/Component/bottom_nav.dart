@@ -100,7 +100,7 @@ class BottomNavBar extends StatelessWidget {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CreateWorkPage()));
         break;
       case 2:
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AcceptWorkPage(createdWorkID: '',)));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AcceptWorkPage()));
         break;
       default:
         break;

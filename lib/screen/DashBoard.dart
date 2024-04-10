@@ -129,13 +129,13 @@ class _DashboardState extends State<Dashboard> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => ProfilePage()),
+                              builder: (context) => RegisterPage()),
                         );
                       } else if (value == 'Statics') {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => StaticPage()),
+                              builder: (context) => StatsPage()),
                         );
                       }
                       else if (value == 'logout') {
@@ -226,21 +226,7 @@ class _DashboardState extends State<Dashboard> {
           // Initialize itemCount to 0
           int itemCount = 0;
 
-          // Filter documents based on the title
-          if (title == "Total Work") {
-            itemCount = snapshot.data?.docs.length ?? 0;
-          } else if (title == "Complete Work") {
-            // Count completed works where the last status is "Complete"
-            itemCount = snapshot.data?.docs.where((doc) {
-              var workData = doc.data() as Map<String, dynamic>;
-              List<dynamic> statuses = workData['statuses'];
-              String lastStatus = statuses.isNotEmpty ? statuses.last : '';
-              return lastStatus == 'Complete';
-            }).length ?? 0;
-          } else if (title == "On-progress Work" || title == "Cancel Work") {
-            // For "On-progress Work" and "Cancel Work", count all documents
-            itemCount = snapshot.data?.docs.length ?? 0;
-          }
+         
 
           return InkWell(
             onTap: () {
@@ -248,7 +234,7 @@ class _DashboardState extends State<Dashboard> {
               if (title == "Total Work") {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => AllWork()),
+                  MaterialPageRoute(builder: (context) => AllWork(totalWorkCount: itemCount,)),
                 );
               } else if (title == "Complete Work") {
                 Navigator.push(
@@ -263,7 +249,7 @@ class _DashboardState extends State<Dashboard> {
               } else if (title == "Cancel Work") {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => CancelWorkPage()),
+                  MaterialPageRoute( builder: (context) => CancelWorkPage(cancelWorkCount: itemCount)),
                 );
               }
             },

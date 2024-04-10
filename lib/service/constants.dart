@@ -30,6 +30,7 @@ Future<String?> getCheckerDeviceToken(String checkerFirstName) async {
   return null;
 }
 
+// Function to send notification to the checker's device
 Future<void> sendNotificationToChecker(String checkerFirstName) async {
   try {
     final String? checkerToken = await getCheckerDeviceToken(checkerFirstName);
@@ -56,7 +57,7 @@ Future<void> sendNotificationToChecker(String checkerFirstName) async {
 
       if (response.statusCode == 200) {
         print('Notification sent successfully to checker.');
-        // Trigger local notification
+        // Show notification popup
         showNotification('New Work Available', 'You have a new work assignment to review.');
       } else {
         print('Failed to send notification to checker: ${response.statusCode}');
@@ -69,6 +70,7 @@ Future<void> sendNotificationToChecker(String checkerFirstName) async {
     print('Error sending notification to checker: $e');
   }
 }
+
 Future<void> showNotification(String title, String body) async {
   const AndroidNotificationDetails androidPlatformChannelSpecifics =
       AndroidNotificationDetails(

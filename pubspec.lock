@@ -864,6 +864,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.0"
+  signature:
+    dependency: "direct main"
+    description:
+      name: signature
+      sha256: d072a766e9a40496296b7593c0d9dee2abded0bdcfb306d9962d0320a9763395
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.4.1"
   sky_engine:
     dependency: transitive
     description: flutter

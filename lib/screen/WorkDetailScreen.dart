@@ -31,7 +31,7 @@ class WorkDetailsScreen extends StatelessWidget {
             gradient: LinearGradient(
               colors: [
                 Color.fromARGB(224, 14, 94, 253),
-                Color.fromARGB(196, 14, 94, 253),
+                Color.fromARGB(255, 4, 6, 126),
               ],
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
@@ -60,17 +60,7 @@ class WorkDetailsScreen extends StatelessWidget {
                         children: [
                           _buildWorkCard(workData),
                           SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => PDFPage(workData: workData),
-                                ),
-                              );
-                            },
-                            child: Text('Generate PDF'),
-                          ),
+                          
                         ],
                       );
                     } else {

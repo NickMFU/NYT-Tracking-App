@@ -31,7 +31,7 @@ class Summarywork extends StatelessWidget {
             gradient: LinearGradient(
               colors: [
                 Color.fromARGB(224, 14, 94, 253),
-                Color.fromARGB(196, 14, 94, 253),
+                Color.fromARGB(255, 4, 6, 126),
               ],
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
@@ -46,7 +46,8 @@ class Summarywork extends StatelessWidget {
             padding: EdgeInsets.all(16.0),
             child: FutureBuilder(
               future: getWorkData(),
-              builder: (context, AsyncSnapshot<Map<String, dynamic>?> snapshot) {
+              builder:
+                  (context, AsyncSnapshot<Map<String, dynamic>?> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
                 } else {
@@ -65,17 +66,42 @@ class Summarywork extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => PDFPage(workData: workData),
+                                  builder: (context) => PDFPage(
+                                      workData: workData,
+                                      barcodeData: workData['Scanbarcode']),
                                 ),
                               );
                             },
-                            child: Text('Generate PDF'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color.fromARGB(
+                                  255, 4, 6, 126), // Background color
+                            ),
+                            child: Container(
+                              height: MediaQuery.of(context).size.height * 0.05,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Generate PDF",
+                                    style: GoogleFonts.dmSans(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color.fromARGB(255, 255, 255, 255),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       );
                     } else {
                       return Center(
-                          child: Text('Work with ID $workID not found.'));
+                        child: Text('Work with ID $workID not found.'),
+                      );
                     }
                   }
                 }
@@ -105,66 +131,20 @@ class Summarywork extends StatelessWidget {
             _buildDetail('Voy', workData['voy']),
             _buildDetail('Shipping', workData['shipping']),
             _buildBarcodes(workData['Scanbarcode']),
-            SizedBox(height: 20), // Add some space
-            _buildImage(workData['imageUrl']), // Display the image
+            SizedBox(height: 20),
+            _buildImage(workData['imageUrl']),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildImage(String? imageUrl) {
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      return Image.network(imageUrl); // Display image from URL
-    } else {
-      return SizedBox(); // Return empty container if no image URL is provided
-    }
-  }
-
-  Future<Map<String, dynamic>?> getWorkData() async {
-  try {
-    // Fetch data from the "works" collection
-    QuerySnapshot<Map<String, dynamic>> querySnapshot =
-        await FirebaseFirestore.instance
-            .collection('works')
-            .where('workID', isEqualTo: workID)
-            .limit(1)
-            .get();
-
-    if (querySnapshot.docs.isNotEmpty) {
-      // Get the document data from the "works" collection
-      Map<String, dynamic> workData = querySnapshot.docs.first.data();
-
-      // Fetch data from the "Scanbarcode" collection within the document
-      QuerySnapshot<Map<String, dynamic>> scanBarcodeSnapshot =
-          await FirebaseFirestore.instance
-              .collection('works')
-              .doc(workID) // Reference the specific document using workID
-              .collection('Scanbarcode')
-              .get();
-        
-
-      // Add the data from the "Scanbarcode" collection to the workData map
-      workData['Scanbarcode'] = scanBarcodeSnapshot.docs.map((doc) => doc.data()).toList();
-
-      return workData;
-    } else {
-      return null;
-    }
-  } catch (error) {
-    print('Error fetching work data: $error');
-    throw error;
-  }
-}
-
- Widget _buildDetail(String label, dynamic value) {
-  if (value is List<String>) {
-    // If the value is a list of strings (barcodes), display each barcode
+  Widget _buildBarcodes(List<dynamic> barcodes) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          'Load to Tractor',
           style: GoogleFonts.dmSans(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -174,34 +154,133 @@ class Summarywork extends StatelessWidget {
         const SizedBox(height: 12),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: value.map((barcode) {
-            return Text(
-              barcode,
-              style: GoogleFonts.dmSans(
-                fontSize: 16,
-                color: Colors.black,
-              ),
+          children: barcodes.map<Widget>((barcodeData) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildBarcodeDetail('VinNo', barcodeData['barcode1']),
+                _buildBarcodeDetail(
+                    'Tractor Registration', barcodeData['tractorRegistration']),
+              ],
             );
           }).toList(),
         ),
-        Divider(color: Colors.grey), // Add a divider
+        Divider(color: Colors.grey),
         const SizedBox(height: 12),
       ],
     );
-  } else {
-    // If the value is not a list, display it as a single value
+  }
+
+  Widget _buildImage(String? imageUrl) {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return Image.network(imageUrl);
+    } else {
+      return SizedBox();
+    }
+  }
+
+  Future<Map<String, dynamic>?> getWorkData() async {
+    try {
+      QuerySnapshot<Map<String, dynamic>> querySnapshot =
+          await FirebaseFirestore.instance
+              .collection('works')
+              .where('workID', isEqualTo: workID)
+              .limit(1)
+              .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        Map<String, dynamic> workData = querySnapshot.docs.first.data();
+
+        QuerySnapshot<Map<String, dynamic>> scanBarcodeSnapshot =
+            await FirebaseFirestore.instance
+                .collection('works')
+                .doc(workID)
+                .collection('Scanbarcode')
+                .get();
+
+        workData['Scanbarcode'] =
+            scanBarcodeSnapshot.docs.map((doc) => doc.data()).toList();
+
+        return workData;
+      } else {
+        return null;
+      }
+    } catch (error) {
+      print('Error fetching work data: $error');
+      throw error;
+    }
+  }
+
+  Widget _buildDetail(String label, dynamic value) {
+    if (value is List<String>) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.dmSans(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: value.map((barcode) {
+              return Text(
+                barcode,
+                style: GoogleFonts.dmSans(
+                  fontSize: 16,
+                  color: Colors.black,
+                ),
+              );
+            }).toList(),
+          ),
+          Divider(color: Colors.grey),
+          const SizedBox(height: 12),
+        ],
+      );
+    } else {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.dmSans(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value.toString(),
+            style: GoogleFonts.dmSans(
+              fontSize: 16,
+              color: Colors.black,
+            ),
+          ),
+          Divider(color: Colors.grey),
+          const SizedBox(height: 12),
+        ],
+      );
+    }
+  }
+
+  Widget _buildBarcodeDetail(String label, dynamic value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: GoogleFonts.dmSans(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Colors.black,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
         Text(
           value.toString(),
           style: GoogleFonts.dmSans(
@@ -209,57 +288,20 @@ class Summarywork extends StatelessWidget {
             color: Colors.black,
           ),
         ),
-        Divider(color: Colors.grey), // Add a divider
-        const SizedBox(height: 12),
+        Divider(color: Colors.grey),
+        const SizedBox(height: 6),
       ],
     );
   }
 
-  
-}
-Widget _buildBarcodes(List<dynamic> barcodes) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        'Load to Tractor',
-        style: GoogleFonts.dmSans(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.black,
-        ),
+  void navigateToPDFPage(BuildContext context, Map<String, dynamic> workData,
+      List<dynamic> barcodeData) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            PDFPage(workData: workData, barcodeData: barcodeData),
       ),
-      const SizedBox(height: 12),
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: barcodes.map((barcodeData) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Car: ${barcodeData['barcode1']}', // Assuming the barcode data contains a 'barcode' field
-                style: GoogleFonts.dmSans(
-                  fontSize: 16,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Tractor Registration: ${barcodeData['tractorRegistration']}', // Assuming the barcode data contains a 'tractorRegistration' field
-                style: GoogleFonts.dmSans(
-                  fontSize: 16,
-                  color: Colors.black,
-                ),
-              ),
-              Divider(color: Colors.grey), // Add a divider
-              const SizedBox(height: 6),
-            ],
-          );
-        }).toList(),
-      ),
-      Divider(color: Colors.grey), // Add a divider
-      const SizedBox(height: 12),
-    ],
-  );
-}
+    );
+  }
 }

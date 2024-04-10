@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import 'package:namyong_demo/screen/login.dart';
 import 'dart:async'; // Import Rive package
 
@@ -43,7 +42,7 @@ class _SplashScreenState extends State<SplashScreen> {
           Center(
             child: TweenAnimationBuilder(
               duration: Duration(seconds: 3),
-              tween: Tween<double>(begin: 1.0, end: 1.0),
+              tween: Tween<double>(begin: 0.0, end: 1.0),
               builder: (BuildContext context, double value, Widget? child) {
                 return Opacity(
                   opacity: value,

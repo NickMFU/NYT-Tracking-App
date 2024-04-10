@@ -1,11 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:namyong_demo/model/Work.dart';
-import 'package:namyong_demo/screen/AllWork.dart';
 import 'package:namyong_demo/screen/EditWork.dart';
 import 'package:namyong_demo/screen/Timeline.dart';
 
-class FinishWorkPage extends StatelessWidget {
+class FinishWorkPage extends StatefulWidget {
+  @override
+  _FinishWorkPageState createState() => _FinishWorkPageState();
+}
+
+class _FinishWorkPageState extends State<FinishWorkPage> {
+  late String _firstName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        DocumentSnapshot userData = await FirebaseFirestore.instance
+            .collection('Employee')
+            .doc(user.uid)
+            .get();
+        setState(() {
+          _firstName = userData['Firstname'];
+        });
+      } catch (e) {
+        print('Error loading user data: $e');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,19 +65,20 @@ class FinishWorkPage extends StatelessWidget {
           ),
         ),
       ),
-      body: FinishWorkList(status: 'Complete'),
+      body: FinishWorkList(status: 'Complete', firstName: _firstName),
     );
   }
 }
 
 class FinishWorkList extends StatelessWidget {
   final String status;
+  final String firstName;
 
-  FinishWorkList({required this.status});
+  FinishWorkList({required this.status, required this.firstName});
 
   final Map<String, Color> statusColors = {
     'NoStatus': Colors.grey,
-    'Assigned': Colors.yellow,
+    'Assigned': Colors.yellow.shade800,
     'Cancel': Colors.red,
     'Complete': Colors.green,
   };
@@ -63,101 +94,153 @@ class FinishWorkList extends StatelessWidget {
         if (snapshot.hasError) {
           return Text('Error: ${snapshot.error}');
         }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Text('No completed works available.');
-        }
 
-        // Filter only the documents with 'Complete' status
-        var completedWorks = snapshot.data!.docs.where((doc) {
+        final works = snapshot.data!.docs;
+        final completeWorks = works.where((doc) {
           var workData = doc.data() as Map<String, dynamic>;
           Work work = Work.fromMap(workData);
           String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
-          return lastStatus == 'Complete';
+          return lastStatus == 'Complete' && (work.dispatcherID == firstName || work.employeeId == firstName);
         }).toList();
 
-        // Show the count of completed works
-        int itemCount = completedWorks.length;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text(
+                'Completed Works: ${completeWorks.length}',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: completeWorks.length,
+                itemBuilder: (context, index) {
+                  var workData = completeWorks[index].data() as Map<String, dynamic>;
+                  String workID = completeWorks[index].id;
 
-        return ListView.builder(
-          itemCount: itemCount,
-          itemBuilder: (context, index) {
-            var workData = completedWorks[index].data() as Map<String, dynamic>;
-            String workID = completedWorks[index].id;
+                  Work work = Work.fromMap(workData);
+                  String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
 
-            Work work = Work.fromMap(workData);
-
-            return Card(
-              margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-              elevation: 4.0,
-              child: ListTile(
-                tileColor: Colors.white,
-                title: Text('Work ID: ${work.workID}'),
-                subtitle: Text('Date: ${work.date}'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TimelinePage(workID: work.workID),
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TimelinePage(workID: work.workID),
+                        ),
+                      );
+                    },
+                    child: Card(
+                      margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                      elevation: 4.0,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Work ID: ${work.workID}'),
+                                    SizedBox(height: 8.0),
+                                    Text('Date: ${work.date}'),
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: statusColors[lastStatus] ??
+                                            Colors.grey,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.0),
+                                    Text(
+                                      lastStatus,
+                                      style: TextStyle(
+                                        color: statusColors[lastStatus] ??
+                                            Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Divider(),
+                          Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Whalf ID:${work.blNo}'),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.edit),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                EditWorkPage(workID: workID),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.delete),
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return AlertDialog(
+                                              title: const Text('Confirm Delete'),
+                                              content: const Text(
+                                                  'Are you sure you want to delete this work?'),
+                                              actions: <Widget>[
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.of(context).pop();
+                                                  },
+                                                  child: Text('Cancel'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () {
+                                                    deleteWork(workID);
+                                                    Navigator.of(context).pop();
+                                                  },
+                                                  child: Text('Delete'),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Colored dot representing status
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: statusColors['Complete'], // Color for completed works
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.edit),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EditWorkPage(workID: workID),
-                          ),
-                        );
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              title: Text('Confirm Delete'),
-                              content: Text('Are you sure you want to delete this work?'),
-                              actions: <Widget>[
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop(); // Close the dialog
-                                  },
-                                  child: Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    deleteWork(workID);
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: Text('Delete'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ],
-                ),
               ),
-            );
-          },
+            ),
+          ],
         );
       },
     );

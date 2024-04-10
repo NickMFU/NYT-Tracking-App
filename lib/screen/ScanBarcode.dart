@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ScanBarcodePage extends StatefulWidget {
   final String workID;
@@ -21,64 +22,126 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
     super.initState();
     _scanBarcodeCollection = FirebaseFirestore.instance
         .collection('works')
-        .doc(widget.workID) // Use workID as the document ID
+        .doc(widget.workID)
         .collection('Scanbarcode');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color.fromARGB(255, 202, 228, 255),
       appBar: AppBar(
-        title: Text('Scan Barcode'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.save),
-            onPressed: _saveScannedBarcodes,
+        backgroundColor: Colors.transparent,
+        elevation: 0.0,
+        toolbarHeight: 100,
+        title: const Text(
+          "Load car to tractor",
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+            gradient: LinearGradient(
+              colors: [
+                Color.fromARGB(224, 14, 94, 253),
+                Color.fromARGB(255, 4, 6, 126),
+              ],
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+            ),
+          ),
+        ),
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(height: 20),
+          TextField(
+            controller: _tractorRegistrationController,
+            decoration: const InputDecoration(
+              labelText: 'Tractor Registration',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          SizedBox(height: 20),
+          ElevatedButton(
+  onPressed: _scanBarcode,
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Color.fromARGB(255, 4, 6, 126), // Background color
+  ),
+  child: Container(
+    height: MediaQuery.of(context).size.height * 0.05,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(5),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(
+          Icons.camera_alt, // Choose the appropriate icon
+          color: Colors.white, // Icon color
+        ),
+        SizedBox(width: 8), // Add some space between icon and text
+        Text(
+          "Scan Barcode",
+          style: GoogleFonts.dmSans(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Color.fromARGB(255, 255, 255, 255),
+          ),
+        ),
+      ],
+    ),
+  ),
+),
+          SizedBox(height: 20),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _scannedBarcodes.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(_scannedBarcodes[index]),
+                  trailing: IconButton(
+                    icon: Icon(Icons.delete),
+                    onPressed: () {
+                      _deleteBarcode(index);
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: _saveScannedBarcodes,
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    Color.fromARGB(255, 4, 6, 126), // Background color
+              ),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.05,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child:
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text(
+                    "Load to Tractor",
+                    style: GoogleFonts.dmSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color.fromARGB(255, 255, 255, 255),
+                    ),
+                  ),
+                ]),
+              ),
+            ),
           ),
         ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ElevatedButton(
-              onPressed: () {
-                _scanBarcode();
-              },
-              child: Text('Scan Barcode'),
-            ),
-            SizedBox(height: 20),
-            Text(
-              'Scanned Barcodes:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _scannedBarcodes.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(_scannedBarcodes[index]),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () {
-                        _deleteBarcode(index);
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _tractorRegistrationController,
-              decoration: const InputDecoration(
-                labelText: 'Tractor Registration',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

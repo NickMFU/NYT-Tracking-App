@@ -10,7 +10,6 @@ import 'package:namyong_demo/model/Work.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math';
 
-
 import 'package:namyong_demo/service/constants.dart';
 
 class CreateWorkPage extends StatefulWidget {
@@ -85,14 +84,32 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
     }
   }
 
- Future<void> getImage() async {
-  final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
-  if (pickedFile != null) {
-    setState(() {
-      _image = File(pickedFile.path);
-    });
+   Future<void> _getSignature() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        DocumentSnapshot userData = await FirebaseFirestore.instance
+            .collection('Employee')
+            .doc(user.uid)
+            .get();
+        setState(() {
+          _dispatcherID = userData['Signature'];
+        });
+      } catch (e) {
+        print('Error loading user data: $e');
+      }
+    }
   }
-}
+
+  Future<void> getImage() async {
+    final pickedFile =
+        await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -158,18 +175,19 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               controller: _dateController,
               readOnly: true, // Set to true to prevent direct text input
               onTap: () async {
-                 final DateTime? pickedDate = await showDatePicker(
-    context: context,
-    initialDate: DateTime.now(),
-    firstDate: DateTime(2020),
-    lastDate: DateTime(2101),
-  );
+                final DateTime? pickedDate = await showDatePicker(
+                  context: context,
+                  initialDate: DateTime.now(),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2101),
+                );
 
-  if (pickedDate != null) {
-    setState(() {
-      // Format the picked date to display without time
-      _dateController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
-    });
+                if (pickedDate != null) {
+                  setState(() {
+                    // Format the picked date to display without time
+                    _dateController.text =
+                        DateFormat('yyyy-MM-dd').format(pickedDate);
+                  });
                 }
               },
             ),
@@ -303,22 +321,22 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
   }
 
   Future<void> showLoadingDialog(BuildContext context) async {
-  return showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext context) {
-      return const AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Text("Creating work..."),
-          ],
-        ),
-      );
-    },
-  );
-}
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text("Creating work..."),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   Future<void> saveWorkToFirebase() async {
     try {
@@ -371,26 +389,27 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
       // Explicitly set the document ID when adding to Firestore
       await workCollection.doc(workID).set(workData);
       print('Work data saved to Firestore successfully! WorkID: $workID');
-       Navigator.pop(context); // Close the loading dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Work created successfully!"),
-        duration: Duration(seconds: 3),
-      ),
-    );
+      Navigator.pop(context); // Close the loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Work created successfully!"),
+          duration: Duration(seconds: 3),
+        ),
+      );
     } catch (e) {
-       print('Error saving work data: $e');
-    // Close the loading dialog on error
-    Navigator.pop(context); // Close the loading dialog
-    // Show error message to the user
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Failed to create work. Please try again."),
-        duration: Duration(seconds: 3),
-      ),
-    );
+      print('Error saving work data: $e');
+      // Close the loading dialog on error
+      Navigator.pop(context); // Close the loading dialog
+      // Show error message to the user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to create work. Please try again."),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
   }
-}
+
   Future<String> uploadImageToFirebaseStorage(String workID) async {
     try {
       if (_image == null) {

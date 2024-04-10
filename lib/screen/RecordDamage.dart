@@ -1,10 +1,10 @@
-import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:namyong_demo/component/form_field.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class RecordDamagePage extends StatefulWidget {
   final String workID;
@@ -20,11 +20,12 @@ class _RecordDamagePageState extends State<RecordDamagePage> {
 
   TextEditingController _vinController = TextEditingController();
   TextEditingController _descriptionController = TextEditingController();
-  File? _image;
+  List<File> _images = [];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color.fromARGB(255, 202, 228, 255),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0.0,
@@ -55,63 +56,69 @@ class _RecordDamagePageState extends State<RecordDamagePage> {
         child: ListView(
           padding: EdgeInsets.all(16.0),
           children: [
-            DefaultFormField(
-              hint: 'VIN No',
+            TextFormField(
               controller: _vinController,
-              validText: 'Please enter a VIN No',
+              decoration: InputDecoration(labelText: 'VIN No'),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a VIN No';
+                }
+                return null;
+              },
             ),
-            const SizedBox(height: 15.0),
-            DefaultFormField(
-              hint: 'Description',
+            SizedBox(height: 15.0),
+            TextFormField(
               controller: _descriptionController,
-              validText:
-                  'Please enter a description', // Set the maximum number of lines for the TextField
+              decoration: InputDecoration(labelText: 'Description'),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a description';
+                }
+                return null;
+              },
             ),
             SizedBox(height: 16.0),
+            ElevatedButton(
+              onPressed: getImage,
+              child: const Text('Select Image'),
+            ),
             SizedBox(
-              width: double.infinity,
-              height: 300, 
-              child: ElevatedButton(
-                onPressed: () {
-                  getImage();
+              height: 100,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _images.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Image.file(_images[index]),
+                  );
                 },
-                child: const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add, size: 50), // Adjust icon size as needed
-                    SizedBox(
-                        height: 10), // Add some space between icon and text
-                    Text('Select Image'),
-                  ],
-                ),
               ),
             ),
-            SizedBox(height: 16.0),
-           ElevatedButton(
-                        onPressed: saveDamageToFirebase,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color.fromARGB(
-                              255, 4, 6, 126), // Background color
-                        ),
-                        child: Container(
-                          height: MediaQuery.of(context).size.height * 0.05,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "Record Damge",
-                                  style: GoogleFonts.dmSans(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color.fromARGB(255, 255, 255, 255),
-                                  ),
-                                ),
-                              ]),
-                        ),
-                      ),
+            ElevatedButton(
+              onPressed: saveDamageToFirebase,
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    Color.fromARGB(255, 4, 6, 126), // Background color
+              ),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.05,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child:
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text(
+                    "Record Damage",
+                    style: GoogleFonts.dmSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color.fromARGB(255, 255, 255, 255),
+                    ),
+                  ),
+                ]),
+              ),
+            ),
           ],
         ),
       ),
@@ -124,42 +131,46 @@ class _RecordDamagePageState extends State<RecordDamagePage> {
 
     if (pickedFile != null) {
       setState(() {
-        _image = File(pickedFile.path);
+        _images.add(File(pickedFile.path));
       });
     }
   }
 
   void saveDamageToFirebase() async {
-    try {
-      final CollectionReference damageCollection = FirebaseFirestore.instance
-          .collection('works')
-          .doc(widget.workID)
-          .collection('Damage');
-      String damageID = 'Damage_${DateTime.now().millisecondsSinceEpoch}';
+    if (_formKey.currentState!.validate()) {
+      try {
+        final CollectionReference damageCollection = FirebaseFirestore.instance
+            .collection('works')
+            .doc(widget.workID)
+            .collection('Damage');
+        String damageID = 'Damage_${DateTime.now().millisecondsSinceEpoch}';
 
-      // Prepare the data to be saved to Firestore
-      Map<String, dynamic> damageData = {
-        'damageID': damageID,
-        'vin': _vinController.text,
-        'description': _descriptionController.text,
-      };
+        Map<String, dynamic> damageData = {
+          'damageID': damageID,
+          'vin': _vinController.text,
+          'description': _descriptionController.text,
+        };
 
-      // Upload the image to Firebase Storage if available
-      if (_image != null) {
-        Reference storageReference =
-            FirebaseStorage.instance.ref().child('damage_images/$damageID');
-        await storageReference.putFile(_image!);
-        String imageUrl = await storageReference.getDownloadURL();
-        damageData['imageUrl'] = imageUrl;
+        List<String> imageUrls = [];
+
+        for (File imageFile in _images) {
+          Reference storageReference =
+              FirebaseStorage.instance.ref().child('damage_images/$damageID');
+          await storageReference.putFile(imageFile);
+          String imageUrl = await storageReference.getDownloadURL();
+          imageUrls.add(imageUrl);
+        }
+
+        damageData['imageUrls'] = imageUrls;
+
+        await damageCollection.doc(damageID).set(damageData);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Damage recorded successfully!')));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error recording damage: $e')));
       }
-
-      // Save the damage data to Firestore
-      await damageCollection.doc(damageID).set(damageData);
-
-      print('Damage data saved to Firestore successfully! DamageID: $damageID');
-    } catch (e) {
-      // Handle errors, e.g., show an error message
-      print('Error saving damage data: $e');
     }
   }
 }

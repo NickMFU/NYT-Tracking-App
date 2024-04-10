@@ -49,16 +49,16 @@ class _TimelinePageState extends State<TimelinePage> {
         content: 'Confirmation during gate out.',
       ),
       TimelineEntry(
-        title: 'Product Release Complete',
+        title: 'Product Release ',
         content: 'Product release process completed.',
       ),
     ];
     imagePaths = [
-      'assets/images/undraw_Add_tasks_re_s5yj.png',
-      'assets/images/43025 2.png',
-      'assets/images/43025 1.png',
       'assets/images/Animation - 1710742336521 (1).gif',
-      'assets/images/1.jpg',
+      'assets/images/43025_2-removebg-preview.png',
+      'assets/images/43025_1-removebg-preview.png',
+      'assets/images/undraw_approve_qwp7-removebg-preview.png',
+      'assets/images/1-removebg-preview.png',
     ];
     currentStep = 0;
     currentImagePath = imagePaths[0];
@@ -133,82 +133,79 @@ class _TimelinePageState extends State<TimelinePage> {
                 width: double.infinity,
               ),
               SizedBox(height: 20),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: timelineEntries.length,
-                itemBuilder: (context, index) {
-                  return TimelineTile(
-                    alignment: TimelineAlign.manual,
-                    lineXY: 0.1,
-                    isFirst: index == 0,
-                    isLast: index == timelineEntries.length - 1,
-                    indicatorStyle: IndicatorStyle(
-                      width: 20,
-                      color: confirmedSteps[index] ? Colors.green : Colors.blue,
-                      indicatorXY: 0.2,
-                      padding: EdgeInsets.all(8),
-                    ),
-                    endChild: ListTile(
-                      title: Text(timelineEntries[index].title),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(timelineEntries[index].content),
-                          SizedBox(height: 8.0),
-                          if (confirmedSteps[index])
-                            Text('Finished at: ${DateTime.now()}'),
-                          if (index == 1 && !confirmedSteps[index])
-                            InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => RecordDamagePage(workID: widget.workID),
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.add, color: Colors.blue),
-                                  SizedBox(width: 8),
-                                  Text('Record',
-                                      style: TextStyle(color: Colors.blue)),
-                                ],
-                              ),
-                            ),
-                          if (index == 2 && !confirmedSteps[index])
-                            InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        ScanBarcodePage(workID: widget.workID),
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.add, color: Colors.blue),
-                                  SizedBox(width: 8),
-                                  Text('Load to tractor',
-                                      style: TextStyle(color: Colors.blue)),
-                                ],
-                              ),
-                            )
-                        ],
-                      ),
+               ListView.builder(
+  shrinkWrap: true,
+  physics: NeverScrollableScrollPhysics(),
+  itemCount: timelineEntries.length,
+  itemBuilder: (context, index) {
+    return TimelineTile(
+      alignment: TimelineAlign.manual,
+      lineXY: 0.1,
+      isFirst: index == 0,
+      isLast: index == timelineEntries.length - 1,
+      indicatorStyle: IndicatorStyle(
+        width: 20,
+        color: allStepsConfirmed ? Colors.green : (index == currentStep ? Colors.yellow : (confirmedSteps[index] ? Colors.green : Colors.blue)),
+        indicatorXY: 0.2,
+        padding: EdgeInsets.all(8),
+      ),
+      endChild: ListTile(
+        title: Text(timelineEntries[index].title),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(timelineEntries[index].content),
+            SizedBox(height: 8.0),
+            if (confirmedSteps[index])
+              Text('Finished at: ${DateTime.now()}'),
+            if (index == 1 && !confirmedSteps[index])
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RecordDamagePage(workID: widget.workID),
                     ),
                   );
                 },
+                child: const Row(
+                  children: [
+                    Icon(Icons.add, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Record', style: TextStyle(color: Colors.blue)),
+                  ],
+                ),
               ),
+            if (index == 2 && !confirmedSteps[index])
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ScanBarcodePage(workID: widget.workID),
+                    ),
+                  );
+                },
+                child: const Row(
+                  children: [
+                    Icon(Icons.add, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Load to tractor', style: TextStyle(color: Colors.blue)),
+                  ],
+                ),
+              )
+          ],
+        ),
+      ),
+    );
+  },
+),
               if (!allStepsConfirmed)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton(
-                      onPressed: resetTimeline,
+                      onPressed: cancelWork,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                       ),
@@ -216,7 +213,7 @@ class _TimelinePageState extends State<TimelinePage> {
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        confirmStep();
+                        showCancelConfirmationDialog();
                         if (timelineEntries[currentStep].title ==
                             'During Gate Out Confirm') {
                           sendNotificationToGateOut();
@@ -270,6 +267,8 @@ class _TimelinePageState extends State<TimelinePage> {
           addGateOutField(employeeID);
         } else if (currentStep == 0) {
           changeWorkStatus("Assigned");
+        }else if (currentStep == 2) {
+          changeWorkStatus("Waiting");
         }
         currentStep = (currentStep + 1).clamp(0, timelineEntries.length - 1);
         currentImagePath = imagePaths[currentStep];
@@ -305,12 +304,70 @@ class _TimelinePageState extends State<TimelinePage> {
     }
   }
 
-  void resetTimeline() {
-    setState(() {
-      changeWorkStatus("Cancel");
-      saveState();
-    });
-  }
+  
+
+ void showCancelConfirmationDialog() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Confirm '),
+        content: Text('You finishthis this step?'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: Text('No'),
+          ),
+          TextButton(
+            onPressed: () {
+              confirmStep();
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: Text('Yes'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+void showConfirmationDialog() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Confirm Cancel'),
+        content: Text('Are you sure you want to cancel this work?'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: Text('No'),
+          ),
+          TextButton(
+            onPressed: () {
+              cancelWork();
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: Text('Yes'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+void cancelWork() {
+  setState(() {
+    confirmedSteps = List<bool>.filled(timelineEntries.length, false);
+    currentStep = 0;
+    currentImagePath = imagePaths[0];
+    saveState();
+  });
+}
 
   void changeWorkStatus(String newStatus) async {
     try {
@@ -338,6 +395,8 @@ class _TimelinePageState extends State<TimelinePage> {
     });
   }
 }
+
+
 
 class TimelineEntry {
   final String title;

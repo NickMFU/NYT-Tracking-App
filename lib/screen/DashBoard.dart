@@ -3,12 +3,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:namyong_demo/model/Work.dart';
 import 'package:namyong_demo/screen/AllWork.dart';
 import 'package:namyong_demo/screen/Stats.dart';
 import 'package:namyong_demo/screen/login.dart';
 import 'package:namyong_demo/Component/bottom_nav.dart';
 import 'package:namyong_demo/screen/profile.dart';
 import 'package:namyong_demo/screen/regis.dart';
+import 'package:namyong_demo/screen/work_status/allwork2.dart';
 import 'package:namyong_demo/screen/work_status/cancel_work.dart';
 import 'package:namyong_demo/screen/work_status/finish_work.dart';
 import 'package:namyong_demo/screen/work_status/onprocess_work.dart';
@@ -26,12 +28,94 @@ class _DashboardState extends State<Dashboard> {
   late String _lastName = '';
   late String role = '';
   int _currentIndex = 0;
+  int totalWorkCount = 0;
+  int on_WorkCount = 0;
+  int completeWorkCount = 0;
+  int cancelWorkCount = 0;
 
   void initState() {
     super.initState();
     _loadUserData();
+    _loadTotalWorkCount();
+    _loadon_WorkCount();
+    _loadcompleteWorkCount();
+    _loadcancelWorkCount();
   }
 
+  Future<void> _loadTotalWorkCount() async {
+  try {
+    QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('works').get();
+    int workCount = snapshot.docs.where((doc) {
+      var workData = doc.data() as Map<String, dynamic>;
+      return (workData['dispatcherID'] == _firstName ||
+              workData['employeeId'] == _firstName ||
+              workData['GateoutID'] == _firstName);
+    }).length;
+    setState(() {
+      totalWorkCount = workCount;
+    });
+  } catch (e) {
+    print('Error loading total work count: $e');
+  }
+}
+Future<void> _loadcompleteWorkCount() async {
+  try {
+    QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('works').get();
+    final works = snapshot.docs;
+    int count = works.where((doc) {
+      var workData = doc.data() as Map<String, dynamic>;
+      Work work = Work.fromMap(workData);
+      String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
+      return lastStatus == 'Complete' && (workData['dispatcherID'] == _firstName ||
+              workData['employeeId'] == _firstName ||
+              workData['GateoutID'] == _firstName);
+    }).length;
+    setState(() {
+      completeWorkCount = count;
+    });
+  } catch (e) {
+    print('Error loading complete work count: $e');
+  }
+}
+Future<void> _loadon_WorkCount() async {
+  try {
+    QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('works').get();
+    final works = snapshot.docs;
+    int count = works.where((doc) {
+      var workData = doc.data() as Map<String, dynamic>;
+      Work work = Work.fromMap(workData);
+      String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
+      return lastStatus == 'Assigned' && (workData['dispatcherID'] == _firstName ||
+              workData['employeeId'] == _firstName ||
+              workData['GateoutID'] == _firstName);
+    }).length;
+    setState(() {
+      on_WorkCount = count;
+    });
+  } catch (e) {
+    print('Error loading on-progress work count: $e');
+  }
+}
+
+Future<void> _loadcancelWorkCount() async {
+  try {
+    QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('works').get();
+    final works = snapshot.docs;
+    int count = works.where((doc) {
+      var workData = doc.data() as Map<String, dynamic>;
+      Work work = Work.fromMap(workData);
+      String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
+      return lastStatus == 'Cancel' && (workData['dispatcherID'] == _firstName ||
+              workData['employeeId'] == _firstName ||
+              workData['GateoutID'] == _firstName);
+    }).length;
+    setState(() {
+      cancelWorkCount = count;
+    });
+  } catch (e) {
+    print('Error loading cancel work count: $e');
+  }
+}
   Future<void> _loadUserData() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -50,6 +134,8 @@ class _DashboardState extends State<Dashboard> {
       }
     }
   }
+
+
 
   Future<void> _signOut() async {
     try {
@@ -89,7 +175,7 @@ class _DashboardState extends State<Dashboard> {
             child: Row(
               children: [
                 Text(
-                  '$_firstName $_lastName\nRole: $role',
+                  '$_firstName\nRole: $role',
                   style: GoogleFonts.dmSans(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -129,7 +215,9 @@ class _DashboardState extends State<Dashboard> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => RegisterPage()),
+                            builder: (context) => ProfilePage(
+                                user: FirebaseAuth.instance.currentUser),
+                          ),
                         );
                       } else if (value == 'Statics') {
                         Navigator.push(
@@ -137,8 +225,7 @@ class _DashboardState extends State<Dashboard> {
                           MaterialPageRoute(
                               builder: (context) => StatsPage()),
                         );
-                      }
-                      else if (value == 'logout') {
+                      } else if (value == 'logout') {
                         _signOut();
                       }
                     });
@@ -165,7 +252,7 @@ class _DashboardState extends State<Dashboard> {
           ),
         ),
       ),
-        bottomNavigationBar: BottomNavBar(
+      bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
         onTap: (int index) {
           setState(() {
@@ -174,35 +261,45 @@ class _DashboardState extends State<Dashboard> {
         },
       ),
       body: Container(
-          decoration: const BoxDecoration(
+        decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage("assets/images/—Pngtree—a blue wallpaper with white_15428175.jpg"),  // path to your image
-            fit: BoxFit.cover,  // adjust as needed
+            image: AssetImage(
+                "assets/images/—Pngtree—a blue wallpaper with white_15428175.jpg"), // path to your image
+            fit: BoxFit.cover, // adjust as needed
           ),
         ),
         padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 2.0),
-        
         child: GridView.count(
           crossAxisCount: 2,
           padding: EdgeInsets.all(3.0),
           children: <Widget>[
             makeDashboardItem(
-                "Total Work", CupertinoIcons.doc_text_fill, 'works'),
+                "Total Work", // Display count here
+                CupertinoIcons.doc_text_fill,
+                'works',
+                totalWorkCount),
+            makeDashboardItem("On-progress Work", CupertinoIcons.car_detailed,
+                'on_progress', on_WorkCount),
             makeDashboardItem(
-              "Complete Work",CupertinoIcons.checkmark_alt_circle, 'complete'),
-            makeDashboardItem(
-                "On-progress Work", CupertinoIcons.car_detailed, 'on_progress'),
-            makeDashboardItem(
-                "Cancel Work", CupertinoIcons.clear_fill, 'cancel'),
+                "Complete Work",
+                CupertinoIcons.checkmark_alt_circle,
+                'complete',
+                completeWorkCount),
+            makeDashboardItem("Cancel Work", CupertinoIcons.clear_fill,
+                'cancel', cancelWorkCount),
           ],
         ),
-        
       ),
       
     );
   }
 
- Card makeDashboardItem(String title, IconData icon, String collection) {
+  Card makeDashboardItem(
+  String title,
+  IconData icon,
+  String collection,
+  int count,
+) {
   return Card(
     elevation: 1.0,
     margin: EdgeInsets.all(8.0),
@@ -223,33 +320,31 @@ class _DashboardState extends State<Dashboard> {
             return Text('Error: ${snapshot.error}');
           }
 
-          // Initialize itemCount to 0
-          int itemCount = 0;
-
-         
-
+        
           return InkWell(
             onTap: () {
               // Navigate to different pages based on the title
               if (title == "Total Work") {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => AllWork(totalWorkCount: itemCount,)),
+                  MaterialPageRoute(builder: (context) => allWorkPage()),
+                );
+              } else if (title == "On-progress Work") {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OnProgressWorkPage(),
+                  ),
                 );
               } else if (title == "Complete Work") {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => FinishWorkPage()),
                 );
-              } else if (title == "On-progress Work") {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => OnProgressWorkPage()),
-                );
               } else if (title == "Cancel Work") {
                 Navigator.push(
                   context,
-                  MaterialPageRoute( builder: (context) => CancelWorkPage(cancelWorkCount: itemCount)),
+                  MaterialPageRoute(builder: (context) => CancelWorkPage()),
                 );
               }
             },
@@ -269,19 +364,9 @@ class _DashboardState extends State<Dashboard> {
                 const SizedBox(height: 20.0),
                 Center(
                   child: Text(
-                    '$title',
+                    '$title: $count', // Display the count here
                     style: GoogleFonts.dmSans(
                       fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                Center(
-                  child: Text(
-                    '$itemCount', // Display the count of items
-                    style: GoogleFonts.dmSans(
-                      fontSize: 24,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),

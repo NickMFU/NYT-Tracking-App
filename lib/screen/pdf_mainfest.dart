@@ -20,17 +20,14 @@ class PDFPage extends StatefulWidget {
 class _PDFPageState extends State<PDFPage> {
   bool _isGeneratingPDF = true;
 
- @override
-void initState() {
-  super.initState();
-  // Call the function to generate and open PDF when the widget is initialized
-  generateAndOpenPDF(widget.workData, widget.barcodeData, context);
-}
+  @override
+  void initState() {
+    super.initState();
+    generateAndOpenPDF(widget.workData, widget.barcodeData, context);
+  }
 
-  Future<void> generateAndOpenPDF(
-      Map<String, dynamic> workData,
-      List<dynamic> barcodeData,
-      BuildContext context) async {
+  Future<void> generateAndOpenPDF(Map<String, dynamic> workData,
+      List<dynamic> barcodeData, BuildContext context) async {
     final pdf = pw.Document();
 
     // Load the logo image as a PDF image
@@ -38,6 +35,15 @@ void initState() {
         (await rootBundle.load('assets/images/playstore-icon.png'))
             .buffer
             .asUint8List();
+
+    final Uint8List sig1Image =
+        (await rootBundle.load('assets/images/sig1.png')).buffer.asUint8List();
+
+    final Uint8List sig2Image =
+        (await rootBundle.load('assets/images/sig2.png')).buffer.asUint8List();
+
+    final Uint8List sig3Image =
+        (await rootBundle.load('assets/images/sig3.png')).buffer.asUint8List();
 
     final ByteData fontData =
         await rootBundle.load('assets/fonts/THSarabunNew Bold.ttf');
@@ -171,54 +177,126 @@ void initState() {
                 ),
               ),
 
-             pw.Table.fromTextArray(
-  border: null,
-  headerDecoration: pw.BoxDecoration(
-    color: PdfColors.blue,
-  ),
-  cellAlignment: pw.Alignment.centerLeft,
-  headerAlignment: pw.Alignment.centerLeft,
-  headerHeight: 30,
-  headers: ['Mark & Nos', 'Pkgs', 'Description', 'Remark'],
-  data: [
-    for (var barcode in barcodeData)
-      [barcode['barcode1'], '1.0','vin1', '-'],
-    for (var barcode in barcodeData)
-      [barcode['barcode1'], '1.0','vin2', '-'],
-      for (var barcode in barcodeData)
-      [barcode['barcode2'], '1.0','vin3', '-'], // Adjust as per your barcode structure
-  ],
-),
-pw.Divider(),
-pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-      children: [
-        pw.Text(
-          'สินค้าได้มีกรส่งมอบตามรายการเอกสารเรียนร้อย',
-          style: pw.TextStyle(
-            font: ttf,
-            fontSize: 10,
-            color: PdfColors.black,
-          ),
-        ),
-        pw.Text(
-          'Tractor Registration: ${barcodeData[0]['tractorRegistration']}',
-          style: pw.TextStyle(
-            font: ttf,
-            fontSize: 10,
-            color: PdfColors.black,
-          ),
-        ),
-      ],
-    ),
-              // Footer section
-              
-              
-              pw.SizedBox(height: 20),
-              pw.Text('Footer Line 1'),
-              pw.Text('Footer Line 2'),
-              pw.Text('Footer Line 3'),
-              pw.Text('Footer Line 4'),
+              pw.Table.fromTextArray(
+                border: null,
+                headerDecoration: const pw.BoxDecoration(
+                  color: PdfColors.blueAccent,
+                ),
+                cellAlignment: pw.Alignment.centerLeft,
+                headerAlignment: pw.Alignment.centerLeft,
+                headerHeight: 30,
+                headers: ['Mark & Nos', 'Pkgs', 'Description', 'Remark'],
+                data: [
+                  for (var barcode in barcodeData)
+                    [barcode['barcode1'], '1.0', 'vin1', '-'],
+                  for (var barcode in barcodeData)
+                    [barcode['barcode2'], '1.0', 'vin2', '-'],
+                  for (var barcode in barcodeData)
+                    [
+                      barcode['barcode3'],
+                      '1.0',
+                      'vin3',
+                      '-'
+                    ], // Adjust as per your barcode structure
+                ],
+              ),
+              pw.Divider(),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'สินค้าได้มีกรส่งมอบตามรายการเอกสารเรียนร้อย',
+                    style: pw.TextStyle(
+                      font: ttf,
+                      fontSize: 10,
+                      color: PdfColors.black,
+                    ),
+                  ),
+                  pw.Text(
+                    'Tractor Registration: ${barcodeData[0]['tractorRegistration']}',
+                    style: pw.TextStyle(
+                      font: ttf,
+                      fontSize: 10,
+                      color: PdfColors.black,
+                    ),
+                  ),
+                ],
+              ),
+            pw.Spacer(),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // Footer section
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      // First line of the footer
+                      pw.Row(
+                        children: [
+                          // Left image
+                          pw.Container(
+                            width: 100, // Adjust width as needed
+                            height: 80, // Adjust height as needed
+                            child: pw.Column(
+                              children: [
+                                pw.Image(
+                                  pw.MemoryImage(
+                                      sig1Image), // Use your image here
+                                ),
+                                pw.Text(
+                                  '${workData['dispatcherID']}\n${workData['date']}',
+                                  style: pw.TextStyle(
+                                    font: ttf,
+                                    fontSize: 15,
+                                    color: PdfColors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Second line of the footer
+                      pw.Row(
+                        children: [
+                          // Left image
+                          pw.Container(
+                            width: 100, // Adjust width as needed
+                            height: 80, // Adjust height as needed
+                            child: pw.Column(
+                              children: [
+                                pw.Image(
+                                  pw.MemoryImage(
+                                      sig2Image), // Use your image here
+                                ),
+                                pw.Text('${workData['employeeId']}\n${workData['date']}'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      pw.Row(
+                        children: [
+                          // Left image
+                          pw.Container(
+                            width: 100, // Adjust width as needed
+                            height: 80, // Adjust height as needed
+                            child: pw.Column(
+                              children: [
+                                pw.Image(
+                                  pw.MemoryImage(
+                                      sig3Image), // Use your image here
+                                ),
+                                pw.Text('${workData['GateoutID']}\n${workData['date']}'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ],
           );
         },
@@ -234,8 +312,8 @@ pw.Row(
     });
 
     OpenFile.open(file.path);
-
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -245,11 +323,9 @@ pw.Row(
       body: Center(
         child: _isGeneratingPDF
             ? CircularProgressIndicator() // Show loading indicator while generating PDF
-            : Text('PDF Generated'), // You can replace this with any widget or leave it empty
+            : Text(
+                'PDF Generated'), // You can replace this with any widget or leave it empty
       ),
     );
   }
 }
-
- 
-

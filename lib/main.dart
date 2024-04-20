@@ -55,8 +55,6 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     checkLoginStatus();
   }
-
-  
   Future<void> checkLoginStatus() async {
    SharedPreferences prefs = await SharedPreferences.getInstance();
    prefs.setBool('isLoggedIn', true);
@@ -71,7 +69,7 @@ class _MyAppState extends State<MyApp> {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       debugShowCheckedModeBanner: false,
-      home: _isLoggedIn ? const Dashboard() : SplashScreen(),
+      home: SplashScreen(),
       routes: {
         '/login': (context) => LoginPage(),
         '/dashboard': (context) => const Dashboard(),

@@ -8,9 +8,10 @@ class Work {
   final String shipping;
   final Duration? estimatedCompletionTime;
   final String employeeId;
-  final String responsiblePerson;
+
   final String imageUrl;
   final String dispatcherID;
+
   List<String> _statuses; // Encapsulated statuses field
 
   Work({
@@ -23,7 +24,6 @@ class Work {
     required this.shipping,
     required this.estimatedCompletionTime,
     required this.employeeId,
-    required this.responsiblePerson,
     required this.imageUrl,
     required this.dispatcherID,
     required List<String> statuses, // Modified to accept List<String> statuses
@@ -42,7 +42,6 @@ class Work {
           ? Duration(milliseconds: map['estimatedCompletionTime'])
           : null,
       employeeId: map['employeeId'],
-      responsiblePerson: map['responsiblePerson'],
       imageUrl: map['imageUrl'],
       dispatcherID: map['dispatcherID'],
       statuses: List<String>.from(map['statuses'] ?? []),
@@ -60,9 +59,10 @@ class Work {
       'shipping': shipping,
       'estimatedCompletionTime': estimatedCompletionTime?.inMilliseconds,
       'employeeId': employeeId,
-      'responsiblePerson': responsiblePerson,
+
       'imageUrl': imageUrl,
       'dispatcherID': dispatcherID,
+
       'statuses': _statuses, // Use the encapsulated statuses field
     };
   }

@@ -136,41 +136,40 @@ class _RecordDamagePageState extends State<RecordDamagePage> {
     }
   }
 
-  void saveDamageToFirebase() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        final CollectionReference damageCollection = FirebaseFirestore.instance
-            .collection('works')
-            .doc(widget.workID)
-            .collection('Damage');
-        String damageID = 'Damage_${DateTime.now().millisecondsSinceEpoch}';
+ void saveDamageToFirebase() async {
+  if (_formKey.currentState!.validate()) {
+    try {
+      final CollectionReference damageCollection = FirebaseFirestore.instance
+          .collection('works')
+          .doc(widget.workID)
+          .collection('Damage');
 
-        Map<String, dynamic> damageData = {
-          'damageID': damageID,
-          'vin': _vinController.text,
-          'description': _descriptionController.text,
-        };
+      Map<String, dynamic> damageData = {
+        'workID': widget.workID, // Use work ID as the document ID
+        'vin': _vinController.text,
+        'description': _descriptionController.text,
+      };
 
-        List<String> imageUrls = [];
+      List<String> imageUrls = [];
 
-        for (File imageFile in _images) {
-          Reference storageReference =
-              FirebaseStorage.instance.ref().child('damage_images/$damageID');
-          await storageReference.putFile(imageFile);
-          String imageUrl = await storageReference.getDownloadURL();
-          imageUrls.add(imageUrl);
-        }
-
-        damageData['imageUrls'] = imageUrls;
-
-        await damageCollection.doc(damageID).set(damageData);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Damage recorded successfully!')));
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error recording damage: $e')));
+      for (File imageFile in _images) {
+        Reference storageReference =
+            FirebaseStorage.instance.ref().child('damage_images/${widget.workID}');
+        await storageReference.putFile(imageFile);
+        String imageUrl = await storageReference.getDownloadURL();
+        imageUrls.add(imageUrl);
       }
+
+      damageData['imageUrls'] = imageUrls;
+
+      await damageCollection.doc(widget.workID).set(damageData);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Damage recorded successfully!')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error recording damage: $e')));
     }
   }
+}
 }

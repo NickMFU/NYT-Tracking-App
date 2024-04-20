@@ -90,6 +90,7 @@ class WorkDetailsScreen extends StatelessWidget {
             _buildDetail('Date', workData['date']),
             _buildDetail('BL/No', workData['blNo']),
             _buildDetail('Consignee', workData['consignee']),
+            _buildDetail('Dispatcher',workData['dispatcherID']),
             _buildDetail('Checker', workData['employeeId']),
             _buildDetail('Vessel', workData['vessel']),
             _buildDetail('Voy', workData['voy']),

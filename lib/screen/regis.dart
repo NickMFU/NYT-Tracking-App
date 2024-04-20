@@ -16,55 +16,13 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   XFile? _profileImage;
-
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance; // Define FirebaseMessaging instance
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
   @override
   void initState() {
     super.initState();
-    _firebaseMessaging.getToken().then((token) {
-      print('Device Token: $token');
-      // Save token to Firestore or send it to your server
-      // Here, you can call a function to save the token to Firestore
-    });
-  }
-
-  Future<void> _registerWithEmailAndPassword() async {
-    try {
-      final UserCredential userCredential =
-          await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      // After registering, navigate to FillInfoPage to complete profile
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => FillInfoPage(
-            user: userCredential.user,
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-            profileImage: _profileImage,
-          ),
-        ),
-      );
-    } catch (e) {
-      print('Failed to register: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to register. Please try again.'),
-        ),
-      );
-    }
-  }
-
-  Future<void> _pickProfilePicture() async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-
-    setState(() {
-      _profileImage = image;
+    _firebaseMessaging.getToken().then((deviceToken) {
+      print('Device Token: $deviceToken');
     });
   }
 
@@ -114,6 +72,45 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
   }
+
+  Future<void> _registerWithEmailAndPassword() async {
+    try {
+      final UserCredential userCredential =
+          await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      // After registering, navigate to FillInfoPage to complete profile
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FillInfoPage(
+            user: userCredential.user,
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+            profileImage: _profileImage,
+          ),
+        ),
+      );
+    } catch (e) {
+      print('Failed to register: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to register. Please try again.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickProfilePicture() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+    setState(() {
+      _profileImage = image;
+    });
+  }
 }
 
 class FillInfoPage extends StatefulWidget {
@@ -121,7 +118,7 @@ class FillInfoPage extends StatefulWidget {
   final String email;
   final String password;
   final XFile? profileImage;
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance; // Define FirebaseMessaging instance here
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
   FillInfoPage({
     required this.user,
@@ -156,7 +153,6 @@ class _FillInfoPageState extends State<FillInfoPage> {
           'DeviceToken': deviceToken, // Store device token
           // Save profile image URL if available
           'ProfileImageURL': widget.profileImage != null ? widget.profileImage!.path : null,
-          
         });
 
         // Navigate to the dashboard after completing the profile
@@ -252,4 +248,3 @@ class _FillInfoPageState extends State<FillInfoPage> {
     );
   }
 }
-

@@ -100,8 +100,18 @@ class FinishWorkList extends StatelessWidget {
           var workData = doc.data() as Map<String, dynamic>;
           Work work = Work.fromMap(workData);
           String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
-          return lastStatus == 'Complete' && (work.dispatcherID == firstName || work.employeeId == firstName);
-        }).toList();
+          return lastStatus == 'Complete' && (workData['dispatcherID'] == firstName ||
+              workData['employeeId'] == firstName ||
+              workData['GateoutID'] == firstName);
+        }).toList()
+         ..sort((a, b) {
+            // Sort by the date of the last work created
+            Work workA = Work.fromMap(a.data() as Map<String, dynamic>);
+            Work workB = Work.fromMap(b.data() as Map<String, dynamic>);
+            DateTime dateA = DateTime.parse(workA.date);
+            DateTime dateB = DateTime.parse(workB.date);
+            return dateB.compareTo(dateA); // Sort in descending order
+          });
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

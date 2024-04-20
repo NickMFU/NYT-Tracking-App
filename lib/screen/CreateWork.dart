@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:namyong_demo/Component/bottom_nav.dart';
@@ -32,7 +33,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
   final TextEditingController _employeeIdController = TextEditingController();
 
   String? _dispatcherID; // Variable to store dispatcherID
-
+  String? _role; 
   List<String> employees = [];
   final ImagePicker _imagePicker = ImagePicker();
   File? _image;
@@ -43,6 +44,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
     super.initState();
     fetchEmployees();
     _getDispatcherID();
+     _loadRoleData();
   }
 
   void fetchEmployees() async {
@@ -84,7 +86,24 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
     }
   }
 
-   Future<void> _getSignature() async {
+  Future<void> _loadRoleData() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        DocumentSnapshot userData = await FirebaseFirestore.instance
+            .collection('Employee')
+            .doc(user.uid)
+            .get();
+        setState(() {
+          _role = userData['Role']; // Update user's role
+        });
+      } catch (e) {
+        print('Error loading user data: $e');
+      }
+    }
+  }
+
+  Future<void> _getSignature() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
@@ -112,34 +131,35 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+   Widget build(BuildContext context) {
     int _currentIndex = 1;
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0.0,
-        toolbarHeight: 100,
-        title: const Text(
-          "Create work page",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
+    return _role == 'Dispatcher'
+        ? Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0.0,
+              toolbarHeight: 100,
+              title: const Text(
+                "Create work page",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              flexibleSpace: Container(
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  gradient: LinearGradient(
+                    colors: [
+                      Color.fromARGB(224, 14, 94, 253),
+                      Color.fromARGB(255, 4, 6, 126),
+                    ],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                  ),
+                ),
+              ),
             ),
-            gradient: LinearGradient(
-              colors: [
-                Color.fromARGB(224, 14, 94, 253),
-                Color.fromARGB(255, 4, 6, 126),
-              ],
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-            ),
-          ),
-        ),
-      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -184,7 +204,6 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
 
                 if (pickedDate != null) {
                   setState(() {
-                    // Format the picked date to display without time
                     _dateController.text =
                         DateFormat('yyyy-MM-dd').format(pickedDate);
                   });
@@ -297,6 +316,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               },
             ),
             const SizedBox(height: 16.0),
+
             ElevatedButton(
               onPressed: () {
                 if (_formKey.currentState!.validate()) {
@@ -304,22 +324,62 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
                   saveWorkToFirebase();
                 }
               },
-              child: const Text('Create Work'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    Color.fromARGB(255, 4, 6, 126), // Background color
+              ),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.05,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child:
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text(
+                    "Create Work",
+                    style: GoogleFonts.dmSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color.fromARGB(255, 255, 255, 255),
+                    ),
+                  ),
+                ]),
+              ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: (int index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-      ),
-    );
+     bottomNavigationBar: BottomNavBar(
+              currentIndex: _currentIndex,
+              onTap: (int index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+            ),
+          )
+        : Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0.0,
+            ),
+            backgroundColor: Colors.white,
+            body: const Center(
+              child: Text(
+                'You do not have permission to access this page.',
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
+            bottomNavigationBar: BottomNavBar(
+              currentIndex: _currentIndex,
+              onTap: (int index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+            ),
+          );
   }
-
   Future<void> showLoadingDialog(BuildContext context) async {
     return showDialog<void>(
       context: context,
@@ -352,12 +412,8 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
 
       String workID = 'Work_${Random().nextInt(90000) + 10000}';
 
-      final String? currentUserID = FirebaseAuth.instance.currentUser?.uid;
-
       String checkerName =
           _employeeIdController.text; // Get the selected checker's name
-
-      String responsiblePerson = '$firstName $lastName';
 
       // Upload the image to Firebase Storage
       String imageUrl = await uploadImageToFirebaseStorage(workID);
@@ -377,16 +433,14 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               )
             : null,
         employeeId: checkerName, // Set the checker's name as the employeeId
-        responsiblePerson: responsiblePerson,
-        dispatcherID: _dispatcherID ??
-            '', // Set the dispatcher's first name as the DispatcherID
+
+        dispatcherID: _dispatcherID ?? '',
+        // Set the dispatcher's first name as the DispatcherID
         imageUrl: imageUrl, // Set the imageUrl in the Work model
         statuses: ['NoStatus'], // Set the initial status as "NoStatus"
       );
 
       Map<String, dynamic> workData = work.toMap();
-
-      // Explicitly set the document ID when adding to Firestore
       await workCollection.doc(workID).set(workData);
       print('Work data saved to Firestore successfully! WorkID: $workID');
       Navigator.pop(context); // Close the loading dialog

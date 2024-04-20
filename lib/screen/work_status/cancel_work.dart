@@ -6,9 +6,7 @@ import 'package:namyong_demo/screen/EditWork.dart';
 import 'package:namyong_demo/screen/Timeline.dart';
 
 class CancelWorkPage extends StatefulWidget {
-  final int cancelWorkCount;
-
-  const CancelWorkPage({Key? key, required this.cancelWorkCount}) : super(key: key);
+ 
 
   @override
   _CancelWorkPageState createState() => _CancelWorkPageState();
@@ -108,8 +106,20 @@ class CancelWorkList extends StatelessWidget {
           var workData = doc.data() as Map<String, dynamic>;
           Work work = Work.fromMap(workData);
           String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
-          return lastStatus == 'Cancel' && (work.dispatcherID == firstName || work.employeeId == firstName);
-        }).toList();
+          return lastStatus == 'Cancel' && (workData['dispatcherID'] == firstName ||
+              workData['employeeId'] == firstName ||
+              workData['GateoutID'] == firstName);
+        }).toList() 
+        ..sort((a, b) {
+            // Sort by the date of the last work created
+            Work workA = Work.fromMap(a.data() as Map<String, dynamic>);
+            Work workB = Work.fromMap(b.data() as Map<String, dynamic>);
+            DateTime dateA = DateTime.parse(workA.date);
+            DateTime dateB = DateTime.parse(workB.date);
+            return dateB.compareTo(dateA); // Sort in descending order
+          });
+
+        
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

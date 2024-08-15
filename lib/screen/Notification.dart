@@ -13,24 +13,13 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
   late Stream<QuerySnapshot> _worksStream;
   late String _firstName = '';
   late String _role = '';
+  bool _hasWorkNotification = false;
+  bool _isDataLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
-    _loadRoleData();
-    _worksStream = _fetchWorks();
-  }
-
-  Stream<QuerySnapshot> _fetchWorks() {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser != null) {
-      final currentUserID = currentUser.uid;
-      return FirebaseFirestore.instance.collection('works').where('statuses',
-          arrayContainsAny: ['NoStatus', 'Waiting']).snapshots();
-    } else {
-      return Stream.empty();
-    }
   }
 
   Future<void> _loadUserData() async {
@@ -43,33 +32,50 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
             .get();
         setState(() {
           _firstName = userData['Firstname'];
+          _role = userData['Role'];
+          _isDataLoaded = true;
         });
+        _worksStream = _fetchWorks();
       } catch (e) {
         print('Error loading user data: $e');
       }
     }
   }
 
-  Future<void> _loadRoleData() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        DocumentSnapshot userData = await FirebaseFirestore.instance
-            .collection('Employee')
-            .doc(user.uid)
-            .get();
-        setState(() {
-          _role = userData['Role']; // Update user's role
-        });
-      } catch (e) {
-        print('Error loading user data: $e');
+  Stream<QuerySnapshot> _fetchWorks() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      return FirebaseFirestore.instance.collection('works').snapshots();
+    } else {
+      return Stream.empty();
+    }
+  }
+
+  void _updateWorkNotification(List<QueryDocumentSnapshot> works) {
+    bool hasNotification = works.any((doc) {
+      var workData = doc.data() as Map<String, dynamic>;
+      Work work = Work.fromMap(workData);
+      String lastStatus =
+          work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
+      if (_role == 'Checker') {
+        return lastStatus == 'NoStatus';
+      } else if (_role == 'Gate out') {
+        return lastStatus == 'Waiting';
       }
+      return false;
+    });
+
+    if (_hasWorkNotification != hasNotification) {
+      setState(() {
+        _hasWorkNotification = hasNotification;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     int _currentIndex = 2;
+
     return Scaffold(
       backgroundColor: Color.fromARGB(255, 202, 228, 255),
       appBar: AppBar(
@@ -97,65 +103,81 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
           ),
         ),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _worksStream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
-          }
-          final works = snapshot.data?.docs ?? [];
-          if (works.isEmpty) {
-            return Center(
-              child: Text('No works available'),
-            );
-          }
-          final filteredWorks = works.where((doc) {
-            var workData = doc.data() as Map<String, dynamic>;
-            Work work = Work.fromMap(workData);
-            String lastStatus =
-                work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
-            return lastStatus == 'NoStatus' || lastStatus == 'Waiting';
-          }).toList();
-          if (filteredWorks.isEmpty) {
-            return Center(
-              child: Text(
-                  'No works with status "NoStatus" or "Waiting" available'),
-            );
-          }
-          return ListView.builder(
-            itemCount: filteredWorks.length,
-            itemBuilder: (context, index) {
-              var workData =
-                  filteredWorks[index].data() as Map<String, dynamic>;
-              String workID = filteredWorks[index].id;
-              Work work = Work.fromMap(workData);
-              return Card(
-                key: ValueKey(work.workID),
-                child: ListTile(
-                  title: Text(work.blNo),
-                  subtitle: Text('WorkID: ${work.workID}'),
-                  onTap: () {
-                    String lastStatus =
-                        work.statuses.isNotEmpty ? work.statuses.last : '';
-                    if (lastStatus == 'NoStatus') {
-                      _DialogNostatus(work);
-                    } else if (lastStatus == 'Waiting') {
-                      _showWorkDialog(work);
-                    }
+      body: _isDataLoaded
+          ? StreamBuilder<QuerySnapshot>(
+              stream: _worksStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Error: ${snapshot.error}'),
+                  );
+                }
+                final works = snapshot.data?.docs ?? [];
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _updateWorkNotification(works);
+                });
+
+                if (works.isEmpty) {
+                  return const Center(
+                    child: Text('No works available'),
+                  );
+                }
+
+                final filteredWorks = works.where((doc) {
+                  var workData = doc.data() as Map<String, dynamic>;
+                  Work work = Work.fromMap(workData);
+                  String lastStatus =
+                      work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
+                  if (_role == 'Checker') {
+                    return lastStatus == 'NoStatus';
+                  } else if (_role == 'Gate out') {
+                    return lastStatus == 'Waiting';
+                  }
+                  return false;
+                }).toList();
+
+                if (filteredWorks.isEmpty) {
+                  return const Center(
+                    child: Text(
+                        'No works with status "Waiting" available'),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: filteredWorks.length,
+                  itemBuilder: (context, index) {
+                    var workData =
+                        filteredWorks[index].data() as Map<String, dynamic>;
+                    String workID = filteredWorks[index].id;
+                    Work work = Work.fromMap(workData);
+                    return Card(
+                      key: ValueKey(work.workID),
+                      child: ListTile(
+                        title: Text(work.blNo),
+                        subtitle: Text('WorkID: ${work.workID}'),
+                        onTap: () {
+                          String lastStatus =
+                              work.statuses.isNotEmpty ? work.statuses.last : '';
+                          if (lastStatus == 'NoStatus') {
+                            _DialogNostatus(work);
+                          } else if (lastStatus == 'Waiting') {
+                            _showWorkDialog(work);
+                          }
+                        },
+                      ),
+                    );
                   },
-                ),
-              );
-            },
-          );
-        },
-      ),
+                );
+              },
+            )
+          : Center(
+              child: CircularProgressIndicator(),
+            ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
         onTap: (int index) {
@@ -163,6 +185,7 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
             _currentIndex = index;
           });
         },
+        hasNotification: _hasWorkNotification, // Pass the flag to the BottomNavBar
       ),
     );
   }
@@ -198,7 +221,6 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
                 try {
                   List<String> updatedStatuses = [...work.statuses];
                   if (updatedStatuses.contains('Waiting')) {
-                    // Add user's first name to work data
                     updatedStatuses.remove('Waiting');
                     updatedStatuses.add('Assigned');
                     await FirebaseFirestore.instance
@@ -206,8 +228,7 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
                         .doc(work.workID)
                         .update({
                       'statuses': updatedStatuses,
-                      'GateoutID':
-                          _firstName, // Save the current user's first name
+                      'GateoutID': _firstName,
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -298,3 +319,5 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
     );
   }
 }
+
+

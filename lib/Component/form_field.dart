@@ -74,7 +74,7 @@ class DefaultFormField extends StatelessWidget {
               filled: true,
               fillColor: Colors.grey.shade100,
               hintText: hint,
-              hintStyle: GoogleFonts.roboto(
+              hintStyle: GoogleFonts.notoSansThai(
                 fontSize: 15.0,
                 color: Colors.grey[400],
                 fontWeight: FontWeight.w500,
@@ -92,7 +92,7 @@ class DefaultFormField extends StatelessWidget {
                 color: Colors.grey.shade400,
               ),
             ),
-            style: GoogleFonts.roboto(
+            style: GoogleFonts.notoSansThai(
               color: Colors.black,
               fontSize: 15,
             ),

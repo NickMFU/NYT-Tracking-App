@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 class ShowDamagePage extends StatefulWidget {
   final String workID;
@@ -12,15 +11,34 @@ class ShowDamagePage extends StatefulWidget {
 }
 
 class _ShowDamagePageState extends State<ShowDamagePage> {
+  Future<void> _deleteDamageRecord(String docID) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('works')
+          .doc(widget.workID)
+          .collection('Damage')
+          .doc(docID)
+          .delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Damage record deleted successfully')),
+      );
+      setState(() {});
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete record: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-       appBar: AppBar(
+      appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0.0,
         toolbarHeight: 100,
         title: const Text(
-          "Damage information",
+          "Damage Information",
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         flexibleSpace: Container(
@@ -40,12 +58,11 @@ class _ShowDamagePageState extends State<ShowDamagePage> {
           ),
         ),
       ),
-      body: FutureBuilder<DocumentSnapshot>(
+      body: FutureBuilder<QuerySnapshot>(
         future: FirebaseFirestore.instance
             .collection('works')
             .doc(widget.workID)
             .collection('Damage')
-            .doc(widget.workID) // Replace 'damageID' with the actual ID of the damage record
             .get(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -54,41 +71,61 @@ class _ShowDamagePageState extends State<ShowDamagePage> {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
-          if (!snapshot.hasData || snapshot.data!.data() == null) {
-            return Center(child: Text('No damage record available'));
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(child: Text('No damage records available'));
           }
 
-          // Extract damage data
-          Map<String, dynamic> damageData =
-              snapshot.data!.data() as Map<String, dynamic>;
+          // Extract damage records
+          List<QueryDocumentSnapshot> damageRecords = snapshot.data!.docs;
 
-          // Extract image URLs
-          List<String> imageUrls =
-              List<String>.from(damageData['imageUrls'] ?? []);
-
-          return ListView(
+          return ListView.builder(
             padding: EdgeInsets.all(16.0),
-            children: [
-              // Display VIN and description
-              ListTile(
-                title: Text('VIN: ${damageData['vin']}'),
-                subtitle: Text('Description: ${damageData['description']}'),
-              ),
-              // Display images
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: imageUrls.length,
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Image.network(imageUrls[index]),
-                    );
-                  },
+            itemCount: damageRecords.length,
+            itemBuilder: (context, index) {
+              Map<String, dynamic> damageData =
+                  damageRecords[index].data() as Map<String, dynamic>;
+
+              // Extract image URLs
+              List<String> imageUrls =
+                  List<String>.from(damageData['imageUrls'] ?? []);
+
+              return Card(
+                margin: EdgeInsets.symmetric(vertical: 10),
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Display VIN and description
+                      ListTile(
+                        title: Text('VIN: ${damageData['vin']}'),
+                        subtitle: Text('Description: ${damageData['description']}'),
+                        trailing: IconButton(
+                          icon: Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            _deleteDamageRecord(damageRecords[index].id);
+                          },
+                        ),
+                      ),
+                      // Display images
+                      SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: imageUrls.length,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Image.network(imageUrls[index]),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              );
+            },
           );
         },
       ),

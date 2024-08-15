@@ -6,8 +6,16 @@ import 'package:namyong_demo/screen/Notification.dart';
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
+  final bool hasNotification; 
+  // Add a boolean to indicate if there is a new notification
 
-  const BottomNavBar({super.key, required this.currentIndex, required this.onTap});
+  const BottomNavBar({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+    this.hasNotification = false, // Initialize with a default value
+  });
+
 
   @override
   Widget build(BuildContext context) {
@@ -42,33 +50,36 @@ class BottomNavBar extends StatelessWidget {
                     height: 70,
                     color: Colors.white,
                     child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          if (i == 1) // Check if it's the 'CreateWork' item
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Color.fromARGB(255, 4, 6, 126),
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.add,
-                                  color: Colors.white,
-                                  size: 24,
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (i == 1) // Check if it's the 'CreateWork' item
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Color.fromARGB(255, 4, 6, 126),
+                                  ),
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.add,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          if (i != 1) // If it's not the 'CreateWork' item, show regular icon
-                            Icon(
-                              i == 0 ? Icons.home : Icons.notifications,
-                              color: i == currentIndex ? Color.fromARGB(255, 4, 6, 126) : Colors.black54,
-                              size: i == currentIndex ? 30 : 26,
-                            ),
-                          i == currentIndex
-                              ? Container(
+                              if (i != 1) // If it's not the 'CreateWork' item, show regular icon
+                                Icon(
+                                  i == 0 ? Icons.home : Icons.notifications,
+                                  color: i == currentIndex ? Color.fromARGB(255, 4, 6, 126) : Colors.black54,
+                                  size: i == currentIndex ? 30 : 26,
+                                ),
+                              if (i != 1 && i == currentIndex)
+                                Container(
                                   margin: const EdgeInsets.only(top: 6),
                                   height: 3,
                                   width: 22,
@@ -76,8 +87,22 @@ class BottomNavBar extends StatelessWidget {
                                     borderRadius: BorderRadius.all(Radius.circular(40)),
                                     color: Color.fromARGB(255, 4, 6, 126),
                                   ),
-                                )
-                              : const SizedBox(),
+                                ),
+                            ],
+                          ),
+                          if (i == 2 && hasNotification) // Show red dot above notification icon
+                            Positioned(
+                              top: 8,
+                              right: 20,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),

@@ -20,7 +20,8 @@ class TimelinePage extends StatefulWidget {
 }
 
 class _TimelinePageState extends State<TimelinePage> {
-  late CollectionReference _timelineRef;
+  late CollectionReference _workRef;
+  late DocumentReference _timelineDocRef;
   late Stream<DocumentSnapshot> _timelineStream;
   late List<bool> confirmedSteps;
   late int currentStep;
@@ -30,16 +31,22 @@ class _TimelinePageState extends State<TimelinePage> {
   Color stepColor = Colors.blue; // Default step color
   Color pageColor = Color.fromARGB(255, 202, 228, 255); // Default page color
   String? _role; // Nullable type for user's role
+  String? currentStatus ;
+  String name = ""; // Variable to track the current work status
 
   @override
   void initState() {
     super.initState();
-    _timelineRef = FirebaseFirestore.instance.collection('timelines');
-    _timelineStream = _timelineRef.doc(widget.workID).snapshots();
+     name = "";
+    _workRef = FirebaseFirestore.instance.collection('works');
+    _timelineDocRef =
+        _workRef.doc(widget.workID).collection('timeline').doc(widget.workID);
+    _timelineStream = _timelineDocRef.snapshots();
     timelineEntries = [
       TimelineEntry(
         title: 'Assigned',
         content: 'Task assigned to a user.',
+        startTime: DateTime.now(), // Initialize start time for the first step
       ),
       TimelineEntry(
         title: 'During Checker Survey',
@@ -59,7 +66,7 @@ class _TimelinePageState extends State<TimelinePage> {
       ),
     ];
     imagePaths = [
-      'assets/images/Animation - 1710742336521 (1).gif',
+      'assets/images/undraw_Add_tasks_re_s5yj-removebg-preview.png',
       'assets/images/43025_2-removebg-preview.png',
       'assets/images/43025_1-removebg-preview.png',
       'assets/images/undraw_approve_qwp7-removebg-preview.png',
@@ -77,9 +84,26 @@ class _TimelinePageState extends State<TimelinePage> {
           confirmedSteps = List<bool>.from(data['confirmedSteps'] ?? []);
           currentImagePath = imagePaths[currentStep];
           pageColor = Color(data['pageColor'] ?? 0xFFFFFFFF);
+          // Fetch the current work status
+          loadTimelineEntries(data); // Load timeline entries
         });
       }
     });
+  }
+
+  void loadTimelineEntries(Map<String, dynamic> data) {
+    if (data.containsKey('timelineEntries')) {
+      List<dynamic> entries = data['timelineEntries'];
+      for (int i = 0; i < entries.length; i++) {
+        var entry = entries[i];
+        timelineEntries[i].startTime = entry['startTime'] != null
+            ? DateTime.parse(entry['startTime'])
+            : null;
+        timelineEntries[i].finishTime = entry['finishTime'] != null
+            ? DateTime.parse(entry['finishTime'])
+            : null;
+      }
+    }
   }
 
   Future<void> _loadRoleData() async {
@@ -99,6 +123,30 @@ class _TimelinePageState extends State<TimelinePage> {
     }
   }
 
+  Future<void> getLastStatus() async {
+  try {
+    DocumentSnapshot workSnapshot = await FirebaseFirestore.instance
+        .collection('works')
+        .doc(widget.workID)
+        .get();
+    Map<String, dynamic> data = workSnapshot.data() as Map<String, dynamic>;
+    List<dynamic> statuses = data['statuses'] ?? [];
+    if (statuses.isNotEmpty) {
+      setState(() {
+        currentStatus = statuses.last; // Update currentStatus with the last status
+      });
+    } else {
+      setState(() {
+        currentStatus = ""; // Handle default status if statuses are empty
+      });
+    }
+  } catch (e) {
+    print('Error fetching last status: $e');
+    setState(() {
+      currentStatus = ""; // Handle error case
+    });
+  }
+}
   @override
   Widget build(BuildContext context) {
     // Check if _role is null before using it
@@ -152,21 +200,10 @@ class _TimelinePageState extends State<TimelinePage> {
                 ),
               );
             },
-            icon: Icon(Icons.pageview, color: Color.fromARGB(255, 255, 255, 255)),
+            icon:
+                Icon(Icons.pageview, color: Color.fromARGB(255, 255, 255, 255)),
           ),
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ShowDamagePage(
-                    workID: widget.workID,
-                  ),
-                ),
-              );
-            },
-            icon: Icon(Icons.pages_outlined, color: Color.fromARGB(255, 255, 255, 255),),
-          ),
+          
         ],
       ),
       body: SingleChildScrollView(
@@ -196,8 +233,10 @@ class _TimelinePageState extends State<TimelinePage> {
                       color: allStepsConfirmed
                           ? Colors.green
                           : (index == currentStep
-                          ? Colors.yellow
-                          : (confirmedSteps[index] ? Colors.green : stepColor)), // Change color to red
+                              ? Colors.yellow
+                              : (confirmedSteps[index]
+                                  ? Colors.green
+                                  : stepColor)), // Change color to red
                       indicatorXY: 0.2,
                       padding: EdgeInsets.all(8),
                     ),
@@ -208,48 +247,76 @@ class _TimelinePageState extends State<TimelinePage> {
                         children: [
                           Text(timelineEntries[index].content),
                           SizedBox(height: 8.0),
+                          if (timelineEntries[index].startTime != null &&
+                              timelineEntries[index].finishTime != null)
+                            Text(
+                                'Duration: ${timelineEntries[index].finishTime!.difference(timelineEntries[index].startTime!).inHours} hours ${timelineEntries[index].finishTime!.difference(timelineEntries[index].startTime!).inMinutes % 60} minutes'),
                           if (confirmedSteps[index])
-                            Text('Finished at: ${DateTime.now()}'),
-                          if (index == 1 && !confirmedSteps[index])
+                            Text(
+                                'Finished at: ${timelineEntries[index].finishTime}'),
+                          if ((_role == 'Checker') && currentStep <= 2)
+                            if (index == 1 && !confirmedSteps[index])
+                              InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => RecordDamagePage(
+                                          workID: widget.workID),
+                                    ),
+                                  );
+                                },
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.add, color: Colors.blue),
+                                    SizedBox(width: 8),
+                                    Text('Record',
+                                        style: TextStyle(color: Colors.blue)),
+                                  ],
+                                ),
+                              ),
+                          if (index == 1)
                             InkWell(
                               onTap: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        RecordDamagePage(workID: widget.workID),
+                                    builder: (context) => ShowDamagePage(
+                                      workID: widget.workID,
+                                    ),
                                   ),
                                 );
                               },
                               child: const Row(
                                 children: [
-                                  Icon(Icons.add, color: Colors.blue),
+                                  Icon(Icons.view_array, color: Colors.green),
                                   SizedBox(width: 8),
-                                  Text('Record',
-                                      style: TextStyle(color: Colors.blue)),
+                                  Text('show Damage',
+                                      style: TextStyle(color: Colors.green)),
                                 ],
                               ),
                             ),
-                          if (index == 2 && !confirmedSteps[index])
-                            InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ScanBarcodePage(
-                                        workID: widget.workID),
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.add, color: Colors.blue),
-                                  SizedBox(width: 8),
-                                  Text('Load to tractor',
-                                      style: TextStyle(color: Colors.blue)),
-                                ],
-                              ),
-                            )
+                          if ((_role == 'Checker') && currentStep <= 2)
+                            if (index == 2 && !confirmedSteps[index])
+                              InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ScanBarcodePage(
+                                          workID: widget.workID),
+                                    ),
+                                  );
+                                },
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.add, color: Colors.blue),
+                                    SizedBox(width: 8),
+                                    Text('Load to tractor',
+                                        style: TextStyle(color: Colors.blue)),
+                                  ],
+                                ),
+                              )
                         ],
                       ),
                     ),
@@ -260,22 +327,24 @@ class _TimelinePageState extends State<TimelinePage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    if ((_role == 'Dispatcher' || _role == 'Checker') && currentStep <= 2)
+                     if ((name != 'CS') && _role == 'Dispatcher' && currentStep == 0)
                       ElevatedButton(
                         onPressed: () {
-                          showCancelDialog();
+                           showCancelConfirmationDialog();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
+                          backgroundColor: Colors.blue,
                         ),
-                        child: Text('Cancel',
+                        child: Text(
+                          'Send Back to checker',
                           style: GoogleFonts.dmSans(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: Color.fromARGB(255, 255, 255, 255),
-                          ),),
+                          ),
+                        ),
                       ),
-                    if ((_role == 'Gate out') && currentStep > 2)
+                    if ((_role == 'Gate out') && currentStep == 3)
                       ElevatedButton(
                         onPressed: () {
                           showCancelDialog();
@@ -286,14 +355,17 @@ class _TimelinePageState extends State<TimelinePage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                         ),
-                        child: Text('Cancel',
+                        child: Text(
+                          'Send back to checker',
                           style: GoogleFonts.dmSans(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: Color.fromARGB(255, 255, 255, 255),
-                          ),),
+                          ),
+                        ),
                       ),
-                    if ((_role == 'Dispatcher' || _role == 'Checker') && currentStep <= 2)
+
+                       if (name != "CS" && _role == 'Checker' && currentStep == 0)
                       ElevatedButton(
                         onPressed: () {
                           showCancelConfirmationDialog();
@@ -305,13 +377,76 @@ class _TimelinePageState extends State<TimelinePage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                         ),
-                        child: Text('Confirm',
+                        child: Text(
+                          'Accept work',
                           style: GoogleFonts.dmSans(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: Color.fromARGB(255, 255, 255, 255),
-                          ),),
+                          ),
+                        ),
                       ),
+              
+                      if (name != "CS" && _role == 'Checker' && currentStep == 0)
+                      ElevatedButton(
+                        onPressed: () {
+                          showCancelDialog();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
+                        child: Text(
+                          'Cancel work',
+                          style: GoogleFonts.dmSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color.fromARGB(255, 255, 255, 255),
+                          ),
+                        ),
+                      ),
+                      if (_role == 'Checker' &&
+                        currentStep > 0 &&
+                        currentStep < 3)
+                       ElevatedButton(
+                        onPressed: () {
+                          showCancelDialog();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
+                        child: Text(
+                          'Cancel work',
+                          style: GoogleFonts.dmSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color.fromARGB(255, 255, 255, 255),
+                          ),
+                        ),
+                      ),
+                    if (_role == 'Checker' &&
+                        currentStep > 0 &&
+                        currentStep < 3)
+                      ElevatedButton(
+                        onPressed: () {
+                          showCancelConfirmationDialog();
+                          if (timelineEntries[currentStep].title ==
+                              'During Gate Out Confirm') {
+                            sendNotificationToGateOut();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                        ),
+                        child: Text(
+                          'Confirm',
+                          style: GoogleFonts.dmSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color.fromARGB(255, 255, 255, 255),
+                          ),
+                        ),
+                      ),
+                      
                     if ((_role == 'Gate out') && currentStep > 2)
                       ElevatedButton(
                         onPressed: () {
@@ -324,12 +459,14 @@ class _TimelinePageState extends State<TimelinePage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                         ),
-                        child: Text('Confirm',
+                        child: Text(
+                          'Confirm',
                           style: GoogleFonts.dmSans(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: Color.fromARGB(255, 255, 255, 255),
-                          ),),
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -351,12 +488,14 @@ class _TimelinePageState extends State<TimelinePage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                       ),
-                      child: Text('Check Summary',
+                      child: Text(
+                        'Check Summary',
                         style: GoogleFonts.dmSans(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: Color.fromARGB(255, 255, 255, 255),
-                        ),),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -368,47 +507,57 @@ class _TimelinePageState extends State<TimelinePage> {
   }
 
   Color getStatusColor() {
-    // Update step color based on status
-    if (confirmedSteps.contains(false)) {
-      return Colors.blue; // Default color
+    if (currentStep == 0) {
+      return Colors.blue;
+    } else if (currentStep == 1) {
+      return Colors.yellow;
+    } else if (currentStep == 2) {
+      return Colors.orange;
+    } else if (currentStep == 3) {
+      return Colors.purple;
     } else {
-      return Colors.red; // Change color to red
+      return Colors.red;
     }
   }
 
-  void confirmStep() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      String employeeID = user.uid; // Assuming UID is used as EmployeeID
-      setState(() {
-        confirmedSteps[currentStep] = true;
-        if (currentStep == timelineEntries.length - 1) {
-          changeWorkStatus("Complete");
-        } else if (currentStep == 0) {
-          changeWorkStatus("Assigned");
-        } else if (currentStep == 2) {
-          changeWorkStatus("Waiting");
-          sendNotificationToGateOut();
-          showNotification('Sent work to Gate out complete',
-              'Waiting Gate out accept works');
-        }
-        currentStep = (currentStep + 1).clamp(0, timelineEntries.length - 1);
-        currentImagePath = imagePaths[currentStep];
-        pageColor = Color.fromARGB(255, 202, 228, 255);;
-        saveState();
-      });
-    } else {
-      print('No user logged in.');
-    }
+ void confirmStep() async {
+  User? user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    String employeeID = user.uid; // Assuming UID is used as EmployeeID
+    setState(() {
+      timelineEntries[currentStep].finishTime = DateTime.now();
+      if (currentStep < timelineEntries.length - 1) {
+        timelineEntries[currentStep + 1].startTime = DateTime.now();
+      }
+      confirmedSteps[currentStep] = true;
+      if (currentStep == timelineEntries.length - 1) {
+        changeWorkStatus("Complete");
+      } else if (currentStep == 0) {
+        changeWorkStatus("Assigned");
+        
+      } else if (currentStep == 2) {
+        changeWorkStatus("Waiting");
+        sendNotificationToGateOut();
+        showNotification('Sent work to Gate out complete', 'Waiting Gate out accept works');
+      }
+      currentStep = (currentStep + 1).clamp(0, timelineEntries.length - 1);
+      currentImagePath = imagePaths[currentStep];
+      pageColor = Color.fromARGB(255, 202, 228, 255);
+      name = "OK";
+      saveState();
+    });
+  } else {
+    print('No user logged in.');
   }
+}
 
   void showCancelConfirmationDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Confirm '),
-          content: Text('You finish this step?'),
+          title: Text('Confirm'),
+          content: Text(getConfirmationText(currentStep)),
           actions: <Widget>[
             TextButton(
               onPressed: () {
@@ -429,13 +578,30 @@ class _TimelinePageState extends State<TimelinePage> {
     );
   }
 
+  String getConfirmationText(int step) {
+    switch (step) {
+      case 0:
+        return 'Do you want to Accept this work ?';
+      case 1:
+        return 'Do you want to confirm the order has no Damage?';
+      case 2:
+        return 'Do you want to confirm Load to the Tractor is complete?';
+      case 3:
+        return 'Do you want to confirm this work completed?';
+      case 4:
+        return 'Do you want to confirm the Product Release?';
+      default:
+        return 'Do you want to confirm this step?';
+    }
+  }
+
   void showCancelDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Confirm Cancel'),
-          content: Text('Are you sure you want to cancel this work?'),
+          content: Text('Are you sure you want to cancel this work and send back to dispatcher?'),
           actions: <Widget>[
             TextButton(
               onPressed: () {
@@ -456,16 +622,74 @@ class _TimelinePageState extends State<TimelinePage> {
     );
   }
 
-  void cancelWork() {
+  void showCancelDialogtochecker() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Confirm Cancel'),
+          content: Text('Are you sure you want to cancel this work and send back to checker?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text('No'),
+            ),
+            TextButton(
+              onPressed: () {
+                cancelWorktochecker();
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text('Yes'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+   void cancelWork() {
     setState(() {
       confirmedSteps = List<bool>.filled(timelineEntries.length, false);
       currentStep = 0;
       currentImagePath = imagePaths[0];
       changeWorkStatus("Cancel");
-      NotificationToGateOut();
-      pageColor = const Color.fromARGB(255, 255, 174, 168); // Update status to Cancel
-      saveState(); // Change page color to red
+      pageColor = const Color.fromARGB(255, 255, 174, 168);
+      name = "CS";
+      saveState();
+      
     });
+  }
+  void cancelWorktochecker() {
+    setState(() {
+      confirmedSteps = List<bool>.filled(timelineEntries.length, false);
+      currentStep = 2;
+      currentImagePath = imagePaths[0];
+      changeWorkStatus("Cancel");
+      pageColor = const Color.fromARGB(255, 255, 174, 168);
+      name = "CS";
+      saveState();
+      // Update name variable to "CS" instead of "Cancel"
+    });
+  }
+
+  void saveState() async {
+    Map<String, dynamic> data = {
+      'currentStep': currentStep,
+      'confirmedSteps': confirmedSteps,
+      'pageColor': pageColor.value,
+      'name' : name,
+      'timelineEntries': timelineEntries.map((entry) {
+        return {
+          'title': entry.title,
+          'startTime': entry.startTime?.toIso8601String(),
+          'finishTime': entry.finishTime?.toIso8601String(),
+        };
+      }).toList(),
+    };
+    await _timelineDocRef.set(data);
   }
 
   void changeWorkStatus(String newStatus) async {
@@ -487,21 +711,53 @@ class _TimelinePageState extends State<TimelinePage> {
     }
   }
 
-  void saveState() async {
-    await _timelineRef.doc(widget.workID).set({
-      'confirmedSteps': confirmedSteps,
-      'currentStep': currentStep,
-      'pageColor': pageColor.value, 
-    });
+  void sendNotificationToGateOut() async {
+    // Add your logic to send notification to gate out
+  }
+
+  void showNotification(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void cancelLastStep() async {
+    if (currentStep > 0) {
+      setState(() {
+        currentStep--;
+        confirmedSteps[currentStep] = false;
+        timelineEntries[currentStep].finishTime = null;
+        if (currentStep < timelineEntries.length - 1) {
+          timelineEntries[currentStep + 1].startTime = null;
+        }
+        currentImagePath = imagePaths[currentStep];
+        pageColor = getStatusColor(); // Change background color
+        saveState();
+      });
+    }
   }
 }
 
 class TimelineEntry {
   final String title;
   final String content;
+  DateTime? startTime;
+  DateTime? finishTime;
 
   TimelineEntry({
     required this.title,
     required this.content,
+    this.startTime,
+    this.finishTime,
   });
 }

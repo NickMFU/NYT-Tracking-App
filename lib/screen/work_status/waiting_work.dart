@@ -5,13 +5,14 @@ import 'package:namyong_demo/model/Work.dart';
 import 'package:namyong_demo/screen/EditWork.dart';
 import 'package:namyong_demo/screen/Timeline.dart';
 
-class AllWorkPage extends StatefulWidget {
+class WaitingWorkPage extends StatefulWidget {
   @override
-  _AllWorkPageState createState() => _AllWorkPageState();
+  _WaitingWorkPageState createState() => _WaitingWorkPageState();
 }
 
-class _AllWorkPageState extends State<AllWorkPage> {
+class _WaitingWorkPageState extends State<WaitingWorkPage> {
   late String _firstName = '';
+  late String _lastName = '';
 
   @override
   void initState() {
@@ -29,6 +30,7 @@ class _AllWorkPageState extends State<AllWorkPage> {
             .get();
         setState(() {
           _firstName = userData['Firstname'];
+          _lastName = userData['Lastname'];
         });
       } catch (e) {
         print('Error loading user data: $e');
@@ -45,7 +47,7 @@ class _AllWorkPageState extends State<AllWorkPage> {
         elevation: 0.0,
         toolbarHeight: 100,
         title: const Text(
-          "Total Work",
+          "Waiting Work",
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         flexibleSpace: Container(
@@ -64,84 +66,17 @@ class _AllWorkPageState extends State<AllWorkPage> {
             ),
           ),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search,color: Color.fromARGB(255, 255, 255, 255)),
-            
-            onPressed: () {
-              showSearch(
-                context: context,
-                delegate: WorkSearchDelegate(_firstName),
-              );
-            },
-          ),
-        ],
       ),
-      body: AllWorkList(status: 'ALL', firstName: _firstName),
+      body: WaitingWorkList(status: 'Waiting', firstName: _firstName),
     );
   }
 }
 
-class WorkSearchDelegate extends SearchDelegate<String> {
-  final String firstName;
-
-  WorkSearchDelegate(this.firstName)
-      : super(
-          searchFieldLabel: 'Search by Wharf ID',
-        );
-
-  @override
-  List<Widget>? buildActions(BuildContext context) {
-    return [
-      IconButton(
-        icon: Icon(Icons.clear),
-        onPressed: () {
-          query = '';
-          showSuggestions(context);
-        },
-      ),
-    ];
-  }
-
-  @override
-  Widget? buildLeading(BuildContext context) {
-    return IconButton(
-      icon: Icon(Icons.arrow_back),
-      onPressed: () {
-        close(context, '');
-      },
-    );
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    return AllWorkList(
-      status: 'ALL',
-      firstName: firstName,
-      searchQuery: query,
-    );
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    return AllWorkList(
-      status: 'ALL',
-      firstName: firstName,
-      searchQuery: query,
-    );
-  }
-}
-
-class AllWorkList extends StatelessWidget {
+class WaitingWorkList extends StatelessWidget {
   final String status;
   final String firstName;
-  final String searchQuery;
 
-  AllWorkList({
-    required this.status,
-    required this.firstName,
-    this.searchQuery = '',
-  });
+  WaitingWorkList({required this.status, required this.firstName});
 
   final Map<String, Color> statusColors = {
     'NoStatus': Colors.grey,
@@ -156,46 +91,49 @@ class AllWorkList extends StatelessWidget {
       stream: FirebaseFirestore.instance.collection('works').snapshots(),
       builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
+          return CircularProgressIndicator();
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return Text('Error: ${snapshot.error}');
         }
 
         final works = snapshot.data!.docs;
-        List filteredWorks = works.where((doc) {
+        final WaitingWorks = works.where((doc) {
           var workData = doc.data() as Map<String, dynamic>;
           Work work = Work.fromMap(workData);
-          String blNo = work.blNo.toLowerCase();
-          return (workData['dispatcherID'] == firstName ||
-              workData['employeeId'] == firstName ||
-              workData['GateoutID'] == firstName)  &&
-                  blNo.contains(searchQuery.toLowerCase());
+          String lastStatus =
+              work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
+          return (lastStatus == 'Waiting' || lastStatus == 'NoStatus') &&
+              (workData['dispatcherID'] == firstName ||
+                  workData['employeeId'] == firstName ||
+                  workData['GateoutID'] == firstName);
         }).toList()
           ..sort((a, b) {
+            // Sort by the date of the last work created
             Work workA = Work.fromMap(a.data() as Map<String, dynamic>);
             Work workB = Work.fromMap(b.data() as Map<String, dynamic>);
             DateTime dateA = DateTime.parse(workA.date);
             DateTime dateB = DateTime.parse(workB.date);
-            return dateB.compareTo(dateA);
+            return dateB.compareTo(dateA); // Sort in descending order
           });
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: EdgeInsets.all(8.0),
               child: Text(
-                'Total Works: ${filteredWorks.length}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                'Waiting Works: ${WaitingWorks.length}',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
             Expanded(
               child: ListView.builder(
-                itemCount: filteredWorks.length,
+                itemCount: WaitingWorks.length,
                 itemBuilder: (context, index) {
-                  var workData = filteredWorks[index].data() as Map<String, dynamic>;
-                  String workID = filteredWorks[index].id;
+                  var workData =
+                      WaitingWorks[index].data() as Map<String, dynamic>;
+                  String workID = WaitingWorks[index].id;
 
                   Work work = Work.fromMap(workData);
                   String lastStatus = work.statuses.isNotEmpty
@@ -207,18 +145,20 @@ class AllWorkList extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => TimelinePage(workID: work.workID),
+                          builder: (context) =>
+                              TimelinePage(workID: work.workID),
                         ),
                       );
                     },
                     child: Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                      margin:
+                          EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
                       elevation: 4.0,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Padding(
-                            padding: const EdgeInsets.all(16.0),
+                            padding: EdgeInsets.all(16.0),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -226,7 +166,7 @@ class AllWorkList extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('Work ID: ${work.workID}'),
-                                    const SizedBox(height: 8.0),
+                                    SizedBox(height: 8.0),
                                     Text('Date: ${work.date}'),
                                   ],
                                 ),
@@ -238,14 +178,16 @@ class AllWorkList extends StatelessWidget {
                                       height: 10,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
-                                        color: statusColors[lastStatus] ?? Colors.grey,
+                                        color: statusColors[lastStatus] ??
+                                            Colors.grey,
                                       ),
                                     ),
-                                    const SizedBox(width: 8.0),
+                                    SizedBox(width: 8.0),
                                     Text(
                                       lastStatus,
                                       style: TextStyle(
-                                        color: statusColors[lastStatus] ?? Colors.grey,
+                                        color: statusColors[lastStatus] ??
+                                            Colors.grey,
                                       ),
                                     ),
                                   ],
@@ -253,13 +195,13 @@ class AllWorkList extends StatelessWidget {
                               ],
                             ),
                           ),
-                          const Divider(),
+                          Divider(),
                           Padding(
                             padding: EdgeInsets.all(16.0),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Whalf ID: ${work.blNo}'),
+                                Text('Whalf ID:${work.blNo}'),
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -269,24 +211,28 @@ class AllWorkList extends StatelessWidget {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => EditWorkPage(workID: workID),
+                                            builder: (context) =>
+                                                EditWorkPage(workID: workID),
                                           ),
                                         );
                                       },
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.delete),
+                                      icon: Icon(Icons.delete),
                                       onPressed: () {
                                         showDialog(
                                           context: context,
                                           builder: (BuildContext context) {
                                             return AlertDialog(
-                                              title: const Text('Confirm Delete'),
-                                              content: const Text('Are you sure you want to delete this work?'),
+                                              title:
+                                                  const Text('Confirm Delete'),
+                                              content: const Text(
+                                                  'Are you sure you want to delete this work?'),
                                               actions: <Widget>[
                                                 TextButton(
                                                   onPressed: () {
-                                                    Navigator.of(context).pop();
+                                                    Navigator.of(context)
+                                                        .pop(); // Close the dialog
                                                   },
                                                   child: Text('Cancel'),
                                                 ),

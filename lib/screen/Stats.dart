@@ -2,23 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:namyong_demo/screen/statsbar.dart';
+import 'package:namyong_demo/screen/time_report.dart';
 
 class StatsPage extends StatefulWidget {
   @override
   _StatsPageState createState() => _StatsPageState();
 }
 
-class _StatsPageState extends State<StatsPage> with SingleTickerProviderStateMixin {
+class _StatsPageState extends State<StatsPage>
+    with SingleTickerProviderStateMixin {
   late String _firstName = '';
   late TabController _tabController;
-  late String _currentMonth;
+  late int _currentYear = DateTime.now().year;
+  late int _currentMonthIndex =
+      DateTime.now().month - 1; // January is 0, December is 11
+  late int _currentDay = DateTime.now().day;
+  late int _currentMonth = DateTime.now().month;
+  late int _currentDayIndex =
+      DateTime.now().day - 1; // Adjust for zero-based indexing
+
+  final List<String> _months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
+  ];
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _tabController = TabController(length: 2, vsync: this);
-    _currentMonth = _getMonth(DateTime.now().month);
   }
 
   @override
@@ -44,37 +67,6 @@ class _StatsPageState extends State<StatsPage> with SingleTickerProviderStateMix
     }
   }
 
-  String _getMonth(int month) {
-    switch (month) {
-      case 1:
-        return 'January';
-      case 2:
-        return 'February';
-      case 3:
-        return 'March';
-      case 4:
-        return 'April';
-      case 5:
-        return 'May';
-      case 6:
-        return 'June';
-      case 7:
-        return 'July';
-      case 8:
-        return 'August';
-      case 9:
-        return 'September';
-      case 10:
-        return 'October';
-      case 11:
-        return 'November';
-      case 12:
-        return 'December';
-      default:
-        return '';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,9 +77,14 @@ class _StatsPageState extends State<StatsPage> with SingleTickerProviderStateMix
         title: const Column(
           children: [
             Text(
-              "All Work",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white,),
+              "Work Statics",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
+            
           ],
         ),
         flexibleSpace: Container(
@@ -106,13 +103,27 @@ class _StatsPageState extends State<StatsPage> with SingleTickerProviderStateMix
             ),
           ),
         ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TimeReportPage(),
+                ),
+              );
+            },
+            icon:
+                Icon(Icons.history, color: Color.fromARGB(255, 255, 255, 255)),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: [
             Tab(text: 'Monthly'),
             Tab(text: 'Daily'),
           ],
-          labelColor: Colors.white, // Set text color of the selected tab
+          labelColor: Colors.white,
           unselectedLabelColor: Colors.white,
         ),
       ),
@@ -123,230 +134,367 @@ class _StatsPageState extends State<StatsPage> with SingleTickerProviderStateMix
           _buildDailyStats(),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => StatsbarPage()),
+          );
+        },
+        child: const Icon(Icons.bar_chart),
+      ),
     );
   }
 
   Widget _buildMonthlyStats() {
-  return ListView(
-    children: [
-      GridView.builder(
-        shrinkWrap: true,
-        padding: EdgeInsets.all(15),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 1, // Adjust as needed
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 40,
-        ),
-        itemCount: 12,
-        itemBuilder: (context, index) {
-          final month = index + 1;
-          final monthName = _getMonth(month);
-          return _buildMonthPieChart(monthName);
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _buildDescriptionBox(),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  DropdownButton<int>(
+                    value: _currentMonthIndex,
+                    onChanged: (int? newIndex) {
+                      setState(() {
+                        _currentMonthIndex = newIndex!;
+                      });
+                    },
+                    items: _months.asMap().entries.map((entry) {
+                      return DropdownMenuItem<int>(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      );
+                    }).toList(),
+                  ),
+                  SizedBox(width: 20),
+                  DropdownButton<int>(
+                    value: _currentYear,
+                    onChanged: (int? newYear) {
+                      setState(() {
+                        _currentYear = newYear!;
+                      });
+                    },
+                    items: _buildYearDropdownItems(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          _buildMonthPieChart(),
+        ],
+      ),
+    );
+  }
+
+  List<DropdownMenuItem<int>> _buildYearDropdownItems() {
+    int currentYear = DateTime.now().year;
+    List<int> years = List.generate(5, (index) => currentYear - index);
+    return years.map((year) {
+      return DropdownMenuItem<int>(
+        value: year,
+        child: Text(year.toString()),
+      );
+    }).toList();
+  }
+
+  Widget _buildMonthPieChart() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: FutureBuilder(
+        future: _fetchCombinedDocs(),
+        builder: (context,
+            AsyncSnapshot<List<QueryDocumentSnapshot<Object?>>> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          final docsForMonthYear = snapshot.data!.where((doc) {
+            final date =
+                doc['date']; // Assuming date is stored as a Timestamp or String
+            if (date is Timestamp) {
+              return date.toDate().month == _currentMonthIndex + 1 &&
+                  date.toDate().year == _currentYear;
+            } else if (date is String) {
+              final dateTime = DateTime.parse(date);
+              return dateTime.month == _currentMonthIndex + 1 &&
+                  dateTime.year == _currentYear;
+            } else {
+              return false; // Invalid date format
+            }
+          }).toList();
+
+          if (docsForMonthYear.isEmpty) {
+            return _buildEmptyPieChart();
+          }
+
+          Map<String, int> stats = calculateMonthlyStats(docsForMonthYear);
+
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: SizedBox(
+              height: 300,
+              child: PieChart(
+                PieChartData(
+                  sections: getSections(stats, docsForMonthYear),
+                  centerSpaceRadius: 40,
+                ),
+              ),
+            ),
+          );
         },
       ),
-    ],
-  );
-}
- Widget _buildMonthPieChart(String monthName) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 10.0),
-    child: Stack(
-      alignment: Alignment.center,
-      children: [
-        StreamBuilder(
-          stream: FirebaseFirestore.instance
-              .collection('works')
-              .where('dispatcherID', isEqualTo: _firstName)
-              .snapshots(),
-          builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
+    );
+  }
 
-            // Filter documents for the current month
-            final docsForMonth = snapshot.data!.docs.where((doc) {
-              final date = doc['date']; // Assuming date is stored as a Timestamp
-              if (date is Timestamp) {
-                return date.toDate().month == _getMonthNumber(monthName);
-              } else if (date is String) {
-                // Convert string to DateTime and extract month
-                final dateTime = DateTime.parse(date);
-                return dateTime.month == _getMonthNumber(monthName);
-              } else {
-                return false; // Invalid date format
-              }
-            }).toList();
-
-            // If no documents for the month, return a blank chart
-            if (docsForMonth.isEmpty) {
-              return _buildEmptyPieChart();
-            }
-
-            // Process the data to calculate stats
-            Map<String, int> stats = calculateMonthlyStats(docsForMonth);
-
-            return Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: PieChart(
-                PieChartData(
-                  sections: getSections(stats),
-                  centerSpaceRadius: 40,
-                ),
+  Widget _buildEmptyPieChart() {
+    return Container(
+      height: 300,
+      color: Colors.grey[300],
+      child: Center(
+        child: PieChart(
+          PieChartData(
+            sections: [
+              PieChartSectionData(
+                color: Colors.grey[300]!,
+                value: 0.01,
+                title: '',
               ),
-            );
-          },
-        ),
-        Positioned(
-          top: 70,
-          child: Text(
-            monthName,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ],
           ),
         ),
-      ],
-    ),
-  );
-}
-  Widget _buildEmptyPieChart() {
-  return Container(
-    color: Colors.grey[300],
-    child: Center(
-      child: PieChart(
-        PieChartData(
-          sections: [
-            PieChartSectionData(
-              color: Colors.grey[300]!,
-              value: 0.01, // A small value to display an almost invisible slice
-              title: '',
-            ),
-          ],
-        ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 
   Widget _buildDailyStats() {
-  DateTime now = DateTime.now();
-  String currentDay = '${now.year}-${_twoDigits(now.month)}-${_twoDigits(now.day)}'; // Format the date properly
-  String formattedDate = '${_getMonth(now.month)} ${now.day}, ${now.year}';
-
-  return Column(
-    children: [
-      Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(
-          'Work Status for $formattedDate',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-      ),
-      Expanded(
-        child: StreamBuilder(
-          stream: FirebaseFirestore.instance
-              .collection('works')
-              .where('dispatcherID', isEqualTo: _firstName)
-              .where('date', isEqualTo: currentDay)
-              .snapshots(),
-          builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
-
-            // Get documents for the current day
-            final docsForDay = snapshot.data!.docs;
-
-            // If no documents for the day, return a blank chart
-            if (docsForDay.isEmpty) {
-              return _buildEmptyPieChart();
-            }
-
-            // Process the data to calculate stats
-            Map<String, int> stats = calculateDailyStats(docsForDay);
-
-            return Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: PieChart(
-                PieChartData(
-                  sections: getSections(stats),
-                  centerSpaceRadius: 40,
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _buildDescriptionBox(),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                DropdownButton<int>(
+                  value: _currentDayIndex,
+                  onChanged: (int? newIndex) {
+                    setState(() {
+                      _currentDayIndex = newIndex!;
+                      _currentDay = newIndex + 1;
+                    });
+                  },
+                  items: List.generate(31, (index) => index + 1).map((day) {
+                    return DropdownMenuItem<int>(
+                      value: day - 1,
+                      child: Text(day.toString()),
+                    );
+                  }).toList(),
                 ),
-              ),
-            );
-          },
-        ),
+                SizedBox(width: 20),
+                DropdownButton<int>(
+                  value: _currentMonth - 1,
+                  onChanged: (int? newIndex) {
+                    setState(() {
+                      _currentMonth = newIndex! + 1;
+                    });
+                  },
+                  items: _months.asMap().entries.map((entry) {
+                    return DropdownMenuItem<int>(
+                      value: entry.key,
+                      child: Text(entry.value),
+                    );
+                  }).toList(),
+                ),
+                SizedBox(width: 20),
+                DropdownButton<int>(
+                  value: _currentYear,
+                  onChanged: (int? newYear) {
+                    setState(() {
+                      _currentYear = newYear!;
+                    });
+                  },
+                  items: _buildYearDropdownItems(),
+                ),
+              ],
+            ),
+          ),
+          _buildDailyPieChart(),
+        ],
       ),
-    ],
+    );
+  }
+
+  Widget _buildDailyPieChart() {
+  return Padding(
+    padding: const EdgeInsets.all(8.0),
+    child: FutureBuilder(
+        future: _fetchCombinedDocs(),
+        builder: (context,
+            AsyncSnapshot<List<QueryDocumentSnapshot<Object?>>> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+        final docsForDay = snapshot.data!.where((doc) {
+          final date = doc['date']; // Assuming date is stored as a Timestamp or String
+          if (date is Timestamp) {
+            return date.toDate().day == _currentDay &&
+                   date.toDate().month == _currentMonth &&
+                   date.toDate().year == _currentYear;
+          } else if (date is String) {
+            final dateTime = DateTime.parse(date);
+            return dateTime.day == _currentDay &&
+                   dateTime.month == _currentMonth &&
+                   dateTime.year == _currentYear;
+          } else {
+            return false; // Invalid date format
+          }
+        }).toList();
+
+        if (docsForDay.isEmpty) {
+          return _buildEmptyPieChart();
+        }
+
+        Map<String, int> stats = calculateDailyStats(docsForDay);
+
+        return SizedBox(
+          height: 300,
+          child: PieChart(
+            PieChartData(
+              sections: getSections(stats, docsForDay),
+              centerSpaceRadius: 40,
+            ),
+          ),
+        );
+      },
+    ),
   );
 }
 
-// Helper function to format single-digit numbers with leading zeros
-String _twoDigits(int n) {
-  if (n >= 10) return "$n";
-  return "0$n";
-}
+  
 
-// Calculate daily stats based on the document data
-Map<String, int> calculateDailyStats(List<QueryDocumentSnapshot> docs) {
-  Map<String, int> stats = {
-    'Assigned': 0,
-    'Cancel': 0,
-    'Complete': 0,
-    'Waiting': 0,
-  };
+  Widget _buildDescriptionBox() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(8.0),
+      margin: const EdgeInsets.only(top: 8.0, left: 8.0, right: 8.0),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildLegendItem(Colors.red, 'Cancel'),
+              _buildLegendItem(Colors.green, 'Complete'),
+              _buildLegendItem(Colors.blue, 'Waiting'),
+              _buildLegendItem(Colors.yellow.shade800, 'Assigned'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
-  docs.forEach((doc) {
-    var workData = doc.data() as Map<String, dynamic>;
-    String lastStatus = workData['statuses'].isNotEmpty ? workData['statuses'].last : 'NoStatus';
-    stats[lastStatus] = stats[lastStatus]! + 1;
-  });
+  Widget _buildLegendItem(Color color, String text) {
+    return Row(
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          color: color,
+        ),
+        SizedBox(width: 4),
+        Text(text),
+      ],
+    );
+  }
 
-  return stats;
-}
-  // Calculate monthly stats based on the document data
-  Map<String, int> calculateMonthlyStats(List<QueryDocumentSnapshot> docs) {
+  String _twoDigits(int n) {
+    if (n >= 10) return "$n";
+    return "0$n";
+  }
+
+  String _getMonth(int monthNumber) {
+    return _months[monthNumber - 1];
+  }
+
+  Map<String, int> calculateDailyStats(List<QueryDocumentSnapshot> docs) {
     Map<String, int> stats = {
       'Assigned': 0,
       'Cancel': 0,
       'Complete': 0,
       'Waiting': 0,
+      'NoStatus': 0,
     };
 
     docs.forEach((doc) {
       var workData = doc.data() as Map<String, dynamic>;
-      String lastStatus = workData['statuses'].isNotEmpty ? workData['statuses'].last : 'NoStatus';
+      String lastStatus = workData['statuses'].isNotEmpty
+          ? workData['statuses'].last
+          : 'NoStatus';
       stats[lastStatus] = stats[lastStatus]! + 1;
     });
 
     return stats;
   }
 
-  // Convert stats data into PieChartSections
-  List<PieChartSectionData> getSections(Map<String, int> stats) {
+  Map<String, int> calculateMonthlyStats(List<QueryDocumentSnapshot> docs) {
+    Map<String, int> stats = {
+      'Assigned': 0,
+      'Cancel': 0,
+      'Complete': 0,
+      'Waiting': 0,
+      'NoStatus': 0,
+    };
+
+    docs.forEach((doc) {
+      var workData = doc.data() as Map<String, dynamic>;
+      String lastStatus = workData['statuses'].isNotEmpty
+          ? workData['statuses'].last
+          : 'NoStatus';
+      stats[lastStatus] = stats[lastStatus]! + 1;
+    });
+
+    return stats;
+  }
+
+  List<PieChartSectionData> getSections(
+      Map<String, int> stats, List<QueryDocumentSnapshot> docs) {
     return stats.entries.map((entry) {
       return PieChartSectionData(
         color: getColor(entry.key),
         value: entry.value.toDouble(),
-        title: '${entry.value} Work', // Modified to show the percentage
-        radius: 50, // Adjusted radius
+        title: '${entry.value}',
+        radius: 50,
         titleStyle: const TextStyle(
-          fontSize: 16, // Adjusted font size
+          fontSize: 16,
           fontWeight: FontWeight.bold,
           color: Colors.white,
           shadows: [Shadow(color: Colors.black, blurRadius: 2)],
+        ),
+        badgeWidget: GestureDetector(
+          onTap: () => _showWorkDetails(entry.key, docs),
+          child: Container(
+            width: 100,
+            height: 100,
+            color: Colors.transparent,
+          ),
         ),
       );
     }).toList();
   }
 
-  // Get color based on status
   Color getColor(String status) {
     switch (status) {
       case 'Assigned':
@@ -356,13 +504,14 @@ Map<String, int> calculateDailyStats(List<QueryDocumentSnapshot> docs) {
       case 'Complete':
         return Colors.green;
       case 'Waiting':
-        return Colors.green;
+        return Colors.blue;
+      case 'NoStatus':
+        return Colors.blue;
       default:
         return Colors.grey;
     }
   }
 
-  // Get the month number from the month name
   int _getMonthNumber(String monthName) {
     switch (monthName) {
       case 'January':
@@ -392,5 +541,47 @@ Map<String, int> calculateDailyStats(List<QueryDocumentSnapshot> docs) {
       default:
         return 0;
     }
+  }
+
+  Future<List<QueryDocumentSnapshot<Object?>>> _fetchCombinedDocs() async {
+    final dispatcherQuery =
+        FirebaseFirestore.instance.collection('works').get();
+
+    final results = await dispatcherQuery;
+
+    final filteredDocs = results.docs.where((doc) {
+      var workData = doc.data() as Map<String, dynamic>;
+      return workData['dispatcherID'] == _firstName ||
+          workData['employeeId'] == _firstName ||
+          workData['GateoutID'] == _firstName;
+    }).toList();
+
+    return filteredDocs.cast<QueryDocumentSnapshot<Object?>>();
+  }
+
+  void _showWorkDetails(String status, List<QueryDocumentSnapshot> docs) {
+    List<QueryDocumentSnapshot> filteredDocs = docs.where((doc) {
+      var workData = doc.data() as Map<String, dynamic>;
+      String lastStatus = workData['statuses'].isNotEmpty
+          ? workData['statuses'].last
+          : 'NoStatus';
+      return lastStatus == status;
+    }).toList();
+
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return ListView.builder(
+          itemCount: filteredDocs.length,
+          itemBuilder: (context, index) {
+            var workData = filteredDocs[index].data() as Map<String, dynamic>;
+            return ListTile(
+              title: Text('Work ID: ${workData['workID']}'),
+              subtitle: Text('Details: ${workData['blNo']}'),
+            );
+          },
+        );
+      },
+    );
   }
 }

@@ -167,7 +167,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
           children: [
             // Title above the form fields
             const Text(
-              "WharfID (BL/No)",
+              "WharfID (BL/No) เลขใบวาป",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20.0),
@@ -175,10 +175,11 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               hint: 'WharfID (BL/No)',
               controller: _blNoController,
               validText: 'Please enter a BL number',
+              textInputType: TextInputType.text,
             ),
             const SizedBox(height: 15.0),
             const Text(
-              "Date",
+              "Date-วันที่",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15.0),
@@ -220,6 +221,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               hint: 'Consignee',
               controller: _consigneeController,
               validText: 'Please enter a consignee',
+              textInputType: TextInputType.text,
             ),
             const SizedBox(height: 15.0),
             const Text(

@@ -38,10 +38,11 @@ Refer to the user manual for detailed instructions on using each feature and nav
 
 For any inquiries, issues, or feedback regarding NYT-Tracking, please contact our support team at [support@example.com](mailto:support@example.com). We value your input and are committed to providing the best possible user experience.
 
-## Contributors
-
-- John Doe (john.doe@example.com)
-- Jane Smith (jane.smith@example.com)
+## Members
+- 6431503062 Soranan Budwong
+- 6431503078 Kawin Khantharaksa
+- 6431503099 Phornpat jantongsuk
+- 6431503134 Tun aung lin
 
 ## License
 

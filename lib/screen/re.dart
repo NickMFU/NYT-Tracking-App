@@ -1,10 +1,30 @@
 import 'dart:io';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:namyong_demo/screen/Dashboard.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Namyong Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: RegisterPage(),
+    );
+  }
+}
 
 class RegisterPage extends StatefulWidget {
   @override
@@ -138,9 +158,20 @@ class _FillInfoPageState extends State<FillInfoPage> {
   String _selectedRole = '';
   XFile? _signatureImage;
 
+  Future<void> _pickSignatureImage() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+    setState(() {
+      _signatureImage = image;
+    });
+  }
+
   void _saveUserInfo(String deviceToken) async {
     try {
+      // Check if a user is logged in
       if (widget.user != null) {
+        // Save user information to Firestore
         await FirebaseFirestore.instance.collection('Employee').doc(widget.user!.uid).set({
           'Email': widget.email,
           'EmployeeID': _employeeIDController.text,
@@ -148,11 +179,14 @@ class _FillInfoPageState extends State<FillInfoPage> {
           'Lastname': _lastNameController.text,
           'Role': _selectedRole,
           'Password': widget.password,
-          'DeviceToken': deviceToken,
+          'DeviceToken': deviceToken, // Store device token
+          // Save profile image URL if available
           'ProfileImageURL': widget.profileImage != null ? widget.profileImage!.path : null,
+          // Save signature image URL if available
           'SignatureImageURL': _signatureImage != null ? _signatureImage!.path : null,
         });
 
+        // Navigate to the dashboard after completing the profile
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => Dashboard()),
@@ -161,15 +195,6 @@ class _FillInfoPageState extends State<FillInfoPage> {
     } catch (e) {
       print('Error saving user info: $e');
     }
-  }
-
-  Future<void> _pickSignatureImage() async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-
-    setState(() {
-      _signatureImage = image;
-    });
   }
 
   @override
@@ -199,6 +224,18 @@ class _FillInfoPageState extends State<FillInfoPage> {
               decoration: InputDecoration(labelText: 'Last Name'),
             ),
             SizedBox(height: 8.0),
+            _signatureImage != null
+                ? Image.file(File(_signatureImage!.path), height: 100)
+                : Container(
+                    height: 100,
+                    color: Colors.grey[300],
+                    child: Center(child: Text('No Signature Image Selected')),
+                  ),
+            SizedBox(height: 8.0),
+            TextButton(
+              onPressed: _pickSignatureImage,
+              child: Text('Select Signature Image'),
+            ),
             ElevatedButton(
               onPressed: () {
                 setState(() {
@@ -240,21 +277,8 @@ class _FillInfoPageState extends State<FillInfoPage> {
             ),
             SizedBox(height: 16.0),
             ElevatedButton(
-              onPressed: _pickSignatureImage,
-              child: Text('Select Signature Image'),
-            ),
-            SizedBox(height: 16.0),
-            _signatureImage != null
-                ? Image.file(
-                    File(_signatureImage!.path),
-                    height: 100,
-                    width: 100,
-                    fit: BoxFit.cover, 
-                  )
-                : SizedBox(height: 100, width: 100, child: Center(child: Text('No signature selected'))),
-            SizedBox(height: 16.0),
-            ElevatedButton(
               onPressed: () {
+                // Obtain device token again and save user info
                 widget._firebaseMessaging.getToken().then((deviceToken) {
                   _saveUserInfo(deviceToken ?? '');
                 });

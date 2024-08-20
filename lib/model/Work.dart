@@ -8,7 +8,6 @@ class Work {
   final String shipping;
   final Duration? estimatedCompletionTime;
   final String employeeId;
-
   final String imageUrl;
   final String dispatcherID;
 
@@ -59,10 +58,8 @@ class Work {
       'shipping': shipping,
       'estimatedCompletionTime': estimatedCompletionTime?.inMilliseconds,
       'employeeId': employeeId,
-
       'imageUrl': imageUrl,
       'dispatcherID': dispatcherID,
-
       'statuses': _statuses, // Use the encapsulated statuses field
     };
   }

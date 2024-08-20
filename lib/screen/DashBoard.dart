@@ -233,6 +233,10 @@ class _DashboardState extends State<Dashboard> {
                           child: Text('Logout'),
                           value: 'logout',
                         ),
+                        const PopupMenuItem(
+                          child: Text('Admin'),
+                          value: 'Admin',
+                        ),
                       ],
                       elevation: 8.0,
                     ).then((value) {
@@ -251,6 +255,12 @@ class _DashboardState extends State<Dashboard> {
                         );
                       } else if (value == 'logout') {
                         _signOut();
+                      }
+                      else if (value == 'Admin') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => RegisterPage()),
+                        );
                       }
                     });
                   },

@@ -1,21 +1,22 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:namyong_demo/Component/bottom_nav.dart';
 import 'package:namyong_demo/model/Work.dart';
-import 'package:namyong_demo/screen/AllWork.dart';
 import 'package:namyong_demo/screen/Stats.dart';
 import 'package:namyong_demo/screen/login.dart';
-import 'package:namyong_demo/Component/bottom_nav.dart';
 import 'package:namyong_demo/screen/profile.dart';
-import 'package:namyong_demo/screen/regis.dart';
-import 'package:namyong_demo/screen/statsbar.dart';
+import 'package:namyong_demo/screen/test_noti_page.dart';
 import 'package:namyong_demo/screen/work_status/allwork2.dart';
 import 'package:namyong_demo/screen/work_status/cancel_work.dart';
 import 'package:namyong_demo/screen/work_status/finish_work.dart';
 import 'package:namyong_demo/screen/work_status/onprocess_work.dart';
 import 'package:namyong_demo/screen/work_status/waiting_work.dart';
+import 'package:namyong_demo/service/notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 
 class Dashboard extends StatefulWidget {
@@ -30,118 +31,38 @@ class _DashboardState extends State<Dashboard> {
   late String _lastName = '';
   late String role = '';
   int _currentIndex = 0;
-  int totalWorkCount = 0;
-  int on_WorkCount = 0;
-  int completeWorkCount = 0;
-  int cancelWorkCount = 0;
-  int waitingWorkCount = 0;
+  bool hasNotification = false; 
+  
 
+  @override
   void initState() {
     super.initState();
     _loadUserData();
-    _loadTotalWorkCount();
-    _loadon_WorkCount();
-    _loadcompleteWorkCount();
-    _loadcancelWorkCount();
-    _loadwaitingWorkCount();
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('Notification clicked!');
+      setState(() {
+        hasNotification = true; // Set the flag when a notification is opened
+      });
+    });
+
+    // Check initial message if the app was opened from a terminated state
+    _checkInitialMessage();
   }
 
-  Future<void> _loadTotalWorkCount() async {
-    try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('works').get();
-      int workCount = snapshot.docs.where((doc) {
-        var workData = doc.data() as Map<String, dynamic>;
-        return (workData['dispatcherID'] == _firstName ||
-                workData['employeeId'] == _firstName ||
-                workData['GateoutID'] == _firstName);
-      }).length;
+  Future<void> _checkInitialMessage() async {
+    RemoteMessage? initialMessage =
+        await FirebaseMessaging.instance.getInitialMessage();
+    if (initialMessage != null) {
       setState(() {
-        totalWorkCount = workCount;
+        hasNotification = true; 
+        AlarmNotificationService.showNewWorkNotification(
+          'You have new work assigned:',
+        );// Set the flag if a notification opened the app
       });
-    } catch (e) {
-      print('Error loading total work count: $e');
     }
   }
 
-  Future<void> _loadcompleteWorkCount() async {
-    try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('works').get();
-      final works = snapshot.docs;
-      int count = works.where((doc) {
-        var workData = doc.data() as Map<String, dynamic>;
-        Work work = Work.fromMap(workData);
-        String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
-        return lastStatus == 'Complete' && (workData['dispatcherID'] == _firstName ||
-                workData['employeeId'] == _firstName ||
-                workData['GateoutID'] == _firstName);
-      }).length;
-      setState(() {
-        completeWorkCount = count;
-      });
-    } catch (e) {
-      print('Error loading complete work count: $e');
-    }
-  }
-
-  Future<void> _loadon_WorkCount() async {
-    try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('works').get();
-      final works = snapshot.docs;
-      int count = works.where((doc) {
-        var workData = doc.data() as Map<String, dynamic>;
-        Work work = Work.fromMap(workData);
-        String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
-        return lastStatus == 'Assigned' && (workData['dispatcherID'] == _firstName ||
-                workData['employeeId'] == _firstName ||
-                workData['GateoutID'] == _firstName);
-      }).length;
-      setState(() {
-        on_WorkCount = count;
-      });
-    } catch (e) {
-      print('Error loading on-progress work count: $e');
-    }
-  }
-
-  Future<void> _loadcancelWorkCount() async {
-    try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('works').get();
-      final works = snapshot.docs;
-      int count = works.where((doc) {
-        var workData = doc.data() as Map<String, dynamic>;
-        Work work = Work.fromMap(workData);
-        String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
-        return lastStatus == 'Cancel' && (workData['dispatcherID'] == _firstName ||
-                workData['employeeId'] == _firstName ||
-                workData['GateoutID'] == _firstName);
-      }).length;
-      setState(() {
-        cancelWorkCount = count;
-      });
-    } catch (e) {
-      print('Error loading cancel work count: $e');
-    }
-  }
-
-   Future<void> _loadwaitingWorkCount() async {
-    try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('works').get();
-      final works = snapshot.docs;
-      int count = works.where((doc) {
-        var workData = doc.data() as Map<String, dynamic>;
-        Work work = Work.fromMap(workData);
-        String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
-        return  (lastStatus == 'Waiting' || lastStatus == 'NoStatus')  && (workData['dispatcherID'] == _firstName ||
-                workData['employeeId'] == _firstName ||
-                workData['GateoutID'] == _firstName);
-      }).length;
-      setState(() {
-        waitingWorkCount = count;
-      });
-    } catch (e) {
-      print('Error loading complete work count: $e');
-    }
-  }
+  
 
   Future<void> _loadUserData() async {
     User? user = FirebaseAuth.instance.currentUser;
@@ -163,16 +84,19 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Future<void> _signOut() async {
-    try {
-      await FirebaseAuth.instance.signOut();
-      // Navigate back to the login page after logout
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginPage()),
-      );
-    } catch (e) {
-      print('Error signing out: $e');
-    }
+    // Clear SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+
+    // Optionally, sign out from FirebaseAuth
+    await FirebaseAuth.instance.signOut();
+
+    // Navigate back to the LoginPage
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => LoginPage()),
+      (Route<dynamic> route) => false,
+    );
   }
 
   @override
@@ -189,7 +113,7 @@ class _DashboardState extends State<Dashboard> {
           child: Text(
             "Welcome",
             style: GoogleFonts.dmSans(
-              fontSize: 25,
+              fontSize: 20,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
@@ -255,11 +179,10 @@ class _DashboardState extends State<Dashboard> {
                         );
                       } else if (value == 'logout') {
                         _signOut();
-                      }
-                      else if (value == 'Admin') {
+                      } else if (value == 'Admin') {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => RegisterPage()),
+                          MaterialPageRoute(builder: (context) => TestNotiPage()),
                         );
                       }
                     });
@@ -302,14 +225,67 @@ class _DashboardState extends State<Dashboard> {
           ),
         ),
         padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 2.0),
-        child: ListView(
-          children: <Widget>[
-            makeDashboardItem("Total Work", CupertinoIcons.doc_text_fill, totalWorkCount),
-            makeDashboardItem("On-progress Work", CupertinoIcons.car_detailed, on_WorkCount),
-            makeDashboardItem("Complete Work", CupertinoIcons.checkmark_alt_circle, completeWorkCount),
-            makeDashboardItem("Cancel Work", CupertinoIcons.clear_fill, cancelWorkCount),
-            makeDashboardItem("Waiting Work", CupertinoIcons.hourglass, waitingWorkCount),
-          ],
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('works').snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            final docs = snapshot.data!.docs;
+            int totalWorkCount = docs.where((doc) {
+              var workData = doc.data() as Map<String, dynamic>;
+              return (workData['dispatcherID'] == _firstName ||
+                      workData['employeeId'] == _firstName ||
+                      workData['GateoutID'] == _firstName);
+            }).length;
+
+            int completeWorkCount = docs.where((doc) {
+              var workData = doc.data() as Map<String, dynamic>;
+              Work work = Work.fromMap(workData);
+              String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
+              return lastStatus == 'Complete' && (workData['dispatcherID'] == _firstName ||
+                      workData['employeeId'] == _firstName ||
+                      workData['GateoutID'] == _firstName);
+            }).length;
+
+            int on_WorkCount = docs.where((doc) {
+              var workData = doc.data() as Map<String, dynamic>;
+              Work work = Work.fromMap(workData);
+              String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
+              return lastStatus == 'Assigned' && (workData['dispatcherID'] == _firstName ||
+                      workData['employeeId'] == _firstName ||
+                      workData['GateoutID'] == _firstName);
+            }).length;
+
+            int cancelWorkCount = docs.where((doc) {
+              var workData = doc.data() as Map<String, dynamic>;
+              Work work = Work.fromMap(workData);
+              String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
+              return lastStatus == 'Cancel' && (workData['dispatcherID'] == _firstName ||
+                      workData['employeeId'] == _firstName ||
+                      workData['GateoutID'] == _firstName);
+            }).length;
+
+            int waitingWorkCount = docs.where((doc) {
+              var workData = doc.data() as Map<String, dynamic>;
+              Work work = Work.fromMap(workData);
+              String lastStatus = work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
+              return (lastStatus == 'Waiting' || lastStatus == 'NoStatus') && (workData['dispatcherID'] == _firstName ||
+                      workData['employeeId'] == _firstName ||
+                      workData['GateoutID'] == _firstName);
+            }).length;
+
+            return ListView(
+              children: <Widget>[
+                makeDashboardItem("Total Work", CupertinoIcons.doc_text_fill, totalWorkCount),
+                makeDashboardItem("On-progress Work", CupertinoIcons.car_detailed, on_WorkCount),
+                makeDashboardItem("Complete Work", CupertinoIcons.checkmark_alt_circle, completeWorkCount),
+                makeDashboardItem("Cancel Work", CupertinoIcons.clear_fill, cancelWorkCount),
+                makeDashboardItem("Waiting Work", CupertinoIcons.hourglass, waitingWorkCount),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -350,14 +326,11 @@ class _DashboardState extends State<Dashboard> {
                 context,
                 MaterialPageRoute(builder: (context) => CancelWorkPage()),
               );
-  
-            }
-            else if (title == "Waiting Work") {
+            } else if (title == "Waiting Work") {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => WaitingWorkPage()),
               );
-  
             }
           },
           child: Padding(

@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:namyong_demo/Component/bottom_nav.dart';
 import 'package:namyong_demo/model/Work.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AcceptWorkPage extends StatefulWidget {
   @override
@@ -11,15 +12,18 @@ class AcceptWorkPage extends StatefulWidget {
 
 class _AcceptWorkPageState extends State<AcceptWorkPage> {
   late Stream<QuerySnapshot> _worksStream;
-  late String _firstName = '';
-  late String _role = '';
-  bool _hasWorkNotification = false;
+  String _firstName = '';
+  String _role = '';
   bool _isDataLoaded = false;
+  Set<String> _notifiedWorkIDs = {};
+  bool _hasWorkNotification = false; // To track works that have been notified
 
   @override
   void initState() {
     super.initState();
+    _worksStream = _fetchWorks();
     _loadUserData();
+    _loadNotifiedWorkIDs(); // Load notified works from storage
   }
 
   Future<void> _loadUserData() async {
@@ -35,7 +39,6 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
           _role = userData['Role'];
           _isDataLoaded = true;
         });
-        _worksStream = _fetchWorks();
       } catch (e) {
         print('Error loading user data: $e');
       }
@@ -44,31 +47,46 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
 
   Stream<QuerySnapshot> _fetchWorks() {
     final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser != null) {
-      return FirebaseFirestore.instance.collection('works').snapshots();
-    } else {
-      return Stream.empty();
-    }
+    return currentUser != null
+        ? FirebaseFirestore.instance.collection('works').snapshots()
+        : Stream.empty();
+  }
+
+  Future<void> _loadNotifiedWorkIDs() async {
+    // Load the notified work IDs from local storage
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _notifiedWorkIDs = prefs.getStringList('notifiedWorkIDs')?.toSet() ?? {};
+    });
+  }
+
+  Future<void> _saveNotifiedWorkIDs() async {
+    // Save the notified work IDs to local storage
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('notifiedWorkIDs', _notifiedWorkIDs.toList());
   }
 
   void _updateWorkNotification(List<QueryDocumentSnapshot> works) {
-    bool hasNotification = works.any((doc) {
+    for (var doc in works) {
       var workData = doc.data() as Map<String, dynamic>;
       Work work = Work.fromMap(workData);
+
+      // Determine if the work matches notification criteria based on the user's role
       String lastStatus =
           work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
-      if (_role == 'Checker') {
-        return lastStatus == 'NoStatus';
-      } else if (_role == 'Gate out') {
-        return lastStatus == 'Waiting';
-      }
-      return false;
-    });
+      bool shouldNotify = (_role == 'Checker' && lastStatus == 'NoStatus') ||
+          (_role == 'Gate out' && lastStatus == 'Waiting');
 
-    if (_hasWorkNotification != hasNotification) {
-      setState(() {
-        _hasWorkNotification = hasNotification;
-      });
+      // Check if the work has not been notified and matches the criteria
+      if (shouldNotify && !_notifiedWorkIDs.contains(work.workID)) {
+        // Show notification and add to notified list
+        _notifiedWorkIDs.add(work.workID);
+      }
+      if (_hasWorkNotification != shouldNotify) {
+        setState(() {
+          _hasWorkNotification = shouldNotify;
+        });
+      }
     }
   }
 
@@ -84,7 +102,11 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
         toolbarHeight: 100,
         title: const Text(
           "Work Notification",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -131,8 +153,9 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
                 final filteredWorks = works.where((doc) {
                   var workData = doc.data() as Map<String, dynamic>;
                   Work work = Work.fromMap(workData);
-                  String lastStatus =
-                      work.statuses.isNotEmpty ? work.statuses.last : 'NoStatus';
+                  String lastStatus = work.statuses.isNotEmpty
+                      ? work.statuses.last
+                      : 'NoStatus';
                   if (_role == 'Checker') {
                     return lastStatus == 'NoStatus';
                   } else if (_role == 'Gate out') {
@@ -143,8 +166,7 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
 
                 if (filteredWorks.isEmpty) {
                   return const Center(
-                    child: Text(
-                        'No works with status "Waiting" available'),
+                    child: Text('No works with status "Waiting" available'),
                   );
                 }
 
@@ -161,8 +183,9 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
                         title: Text(work.blNo),
                         subtitle: Text('WorkID: ${work.workID}'),
                         onTap: () {
-                          String lastStatus =
-                              work.statuses.isNotEmpty ? work.statuses.last : '';
+                          String lastStatus = work.statuses.isNotEmpty
+                              ? work.statuses.last
+                              : '';
                           if (lastStatus == 'NoStatus') {
                             _DialogNostatus(work);
                           } else if (lastStatus == 'Waiting') {
@@ -175,7 +198,7 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
                 );
               },
             )
-          : Center(
+          : const Center(
               child: CircularProgressIndicator(),
             ),
       bottomNavigationBar: BottomNavBar(
@@ -184,8 +207,7 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
           setState(() {
             _currentIndex = index;
           });
-        },
-        hasNotification: _hasWorkNotification, // Pass the flag to the BottomNavBar
+        }, // Pass the flag to the BottomNavBar
       ),
     );
   }
@@ -231,13 +253,13 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
                       'GateoutID': _firstName,
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
+                      const SnackBar(
                         content: Text('Work accepted successfully.'),
                       ),
                     );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
+                      const SnackBar(
                         content: Text('Work is already accepted.'),
                       ),
                     );
@@ -245,11 +267,18 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
                 } catch (e) {
                   print('Error accepting work: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
+                    const SnackBar(
                       content: Text('Error accepting work. Please try again.'),
                     ),
                   );
                 }
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          AcceptWorkPage()), // Replace with your actual dashboard page widget
+                  (Route<dynamic> route) => false,
+                );
               },
             ),
           ],
@@ -311,6 +340,13 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
                     ),
                   );
                 }
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          AcceptWorkPage()), // Replace with your actual dashboard page widget
+                  (Route<dynamic> route) => false,
+                );
               },
             ),
           ],
@@ -319,5 +355,3 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
     );
   }
 }
-
-

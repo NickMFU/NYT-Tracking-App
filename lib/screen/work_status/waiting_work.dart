@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:namyong_demo/model/Work.dart';
 import 'package:namyong_demo/screen/EditWork.dart';
 import 'package:namyong_demo/screen/Timeline.dart';
@@ -48,7 +48,7 @@ class _WaitingWorkPageState extends State<WaitingWorkPage> {
         toolbarHeight: 100,
         title: const Text(
           "Waiting Work",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,color: Colors.white),
         ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(

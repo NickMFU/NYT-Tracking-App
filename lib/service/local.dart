@@ -3,16 +3,35 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:http/http.dart' as http;
+import 'package:permission_handler/permission_handler.dart';
 
-class LNotificationService {
-  static const String BASE_URL =
-      'https://fcm.googleapis.com/v1/projects/namyongapp/messages:send';
+
+
+class LocalNotificationService {
+  static const String BASE_URL = 'https://fcm.googleapis.com/fcm/send';
+  static const String KEY_SERVER =
+      'AAAAa2amNh0:APA91bFwHRDkkJCKaYfe2LYnYrh7B_oo3iSvBz278nPof6MVWJNySoAH8AW0_zmVqT5xg6F7Ic1g3aVMS_sUDJ5k0IkjZ3sxNCMpnFGlRES07bwJu9ABT6r2DJRG-InhaMGREfCwwx1u';
+  static const String SENDER_ID = '461283669533';
+
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  // Initialize the service
+  Future<void> requestPermission() async {
+    PermissionStatus status = await Permission.notification.request();
+    if (status != PermissionStatus.granted) {
+      throw Exception('Permission not granted');
+    }
+
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    print('User granted permission: ${settings.authorizationStatus}');
+  }
+
   Future<void> initialize() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -24,41 +43,77 @@ class LNotificationService {
 
     await _notificationsPlugin.initialize(initializationSettings);
     handleForegroundNotifications();
+
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   }
 
-  // Send FCM Notification using Access Token
+  Future<void> showNotification(String title, String body) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'your_channel_id',
+      'your_channel_name',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      icon: '@mipmap/ic_launcher',
+    );
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+    await _notificationsPlugin.show(
+      0,
+      title,
+      body,
+      platformChannelSpecifics,
+    );
+  }
+
+  Future<String?> getCheckerDeviceToken(String checkerFirstName) async {
+    try {
+      final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('Employee')
+          .where('Firstname', isEqualTo: checkerFirstName)
+          .limit(1)
+          .get();
+      if (querySnapshot.docs.isNotEmpty) {
+        final DocumentSnapshot doc = querySnapshot.docs.first;
+        final String? deviceToken = doc['DeviceToken'];
+        return deviceToken;
+      }
+    } catch (e) {
+      print('Error fetching checker device token: $e');
+    }
+    return null;
+  }
+
   Future<void> sendNotificationToChecker(String checkerFirstName) async {
     try {
       final String? checkerDeviceToken =
           await getCheckerDeviceToken(checkerFirstName);
       if (checkerDeviceToken != null) {
-        final String accessToken = await getAccessToken(); // Get Access Token
         final notification = {
-          'message': {
-            'token': checkerDeviceToken,
-            'notification': {
-              'title': 'New Work Available',
-              'body':
-                  'You have a new work assignment to review, please check your notification.',
-            },
+          'to': checkerDeviceToken,
+          'notification': {
+            'title': 'New Work Available',
+            'body':
+                'You have a new work assignment to review please check your notification.',
+            'icon': 'ic_notification',
+            'sound': 'default',
           },
-        };
-
+        }; // Send the notification using FCM
         final response = await http.post(
           Uri.parse(BASE_URL),
           headers: <String, String>{
             'Content-Type': 'application/json',
-            'Authorization':
-                'Bearer $accessToken', // Use Access Token for Authorization
+            'Authorization': 'key=$KEY_SERVER',
           },
           body: jsonEncode(notification),
         );
-
         if (response.statusCode == 200) {
           print('Notification sent successfully to checker.');
+
+          // Show a local notification when sending notification is successful
           await showNotification(
-            'Sent work to Checker complete',
+            'Sent work to Check complete',
             'Waiting Checker to accept works',
           );
         } else {
@@ -74,38 +129,39 @@ class LNotificationService {
     }
   }
 
-  
   Future<void> notificationToGateOut() async {
   try {
-    final String accessToken = await getAccessToken();
+    // Retrieve all employees with the role 'Gate out'
     QuerySnapshot querySnapshot = await FirebaseFirestore.instance
         .collection('Employee')
-        .where('Role', isEqualTo:'Gate out')
+        .where('Role', isEqualTo: 'Gate out')
         .get();
+
+    // Extract the device tokens from the query result
     List<String> tokens = querySnapshot.docs
         .map((doc) => doc['DeviceToken'] as String)
         .where((token) => token.isNotEmpty)
         .toList();
+
     if (tokens.isNotEmpty) {
       // Loop through each token and send a notification
       for (String token in tokens) {
         // Construct the notification payload
         final notification = {
-          'message': {
-            'token': token,
-            'notification': {
-              'title': 'New Work Available',
-              'body':
-                  'You have a new work assignment to review, please check your notification.',
-            },
+          'to': token,
+          'notification': {
+            'title': 'New Work Available',
+            'body': 'You have a new work assignment to review please check your notification..',
+            'sound': 'default',
           },
         };
+
+        // Send the notification using FCM
         final response = await http.post(
           Uri.parse(BASE_URL),
           headers: <String, String>{
             'Content-Type': 'application/json',
-            'Authorization':
-                'Bearer $accessToken', // Use Access Token for Authorization
+            'Authorization': 'key=$KEY_SERVER',
           },
           body: jsonEncode(notification),
         );
@@ -133,7 +189,6 @@ class LNotificationService {
 Future<void> sendNotificationBackToDispatcher(String workID) async {
   try {
     // Fetch the work document from Firestore
-    final String accessToken = await getAccessToken();
     final DocumentSnapshot workDoc = await FirebaseFirestore.instance
         .collection('works')
         .doc(workID)
@@ -174,28 +229,24 @@ Future<void> sendNotificationBackToDispatcher(String workID) async {
     }
 
     // Construct the notification payload
-    
     final notification = {
-          'message': {
-            'token': dispatcherDeviceToken,
-            'notification': {
-              'title': 'New Work Available',
-              'body':
-                  'You have a new work assignment to review, please check your notification.',
-            },
-          },
-        };
+      'to': dispatcherDeviceToken,
+      'notification': {
+        'title': 'Work Update',
+        'body': 'There is an update regarding your work assignment.',
+        'sound': 'default',
+      },
+    };
 
     // Send the notification using FCM
-  final response = await http.post(
-          Uri.parse(BASE_URL),
-          headers: <String, String>{
-            'Content-Type': 'application/json',
-            'Authorization':
-                'Bearer $accessToken', // Use Access Token for Authorization
-          },
-          body: jsonEncode(notification),
-        );
+    final response = await http.post(
+      Uri.parse(BASE_URL),
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+        'Authorization': 'key=$KEY_SERVER',
+      },
+      body: jsonEncode(notification),
+    );
 
     // Check the response status code
     if (response.statusCode == 200) {
@@ -219,7 +270,6 @@ Future<void> sendNotificationBackToDispatcher(String workID) async {
 Future<void> sendNotificationBackToChecker(String workID) async {
   try {
     // Fetch the work document from Firestore
-    final String accessToken = await getAccessToken();
     final DocumentSnapshot workDoc = await FirebaseFirestore.instance
         .collection('works')
         .doc(workID)
@@ -261,25 +311,23 @@ Future<void> sendNotificationBackToChecker(String workID) async {
 
     // Construct the notification payload
     final notification = {
-          'message': {
-            'token': checkerToken,
-            'notification': {
-              'title': 'New Work Available',
-              'body':
-                  'You have a new work assignment to review, please check your notification.',
-            },
-          },
-        };
+      'to': checkerToken,
+      'notification': {
+        'title': 'Work Update',
+        'body': 'There is an update regarding your work assignment.',
+        'sound': 'default',
+      },
+    };
+
     // Send the notification using FCM
     final response = await http.post(
-          Uri.parse(BASE_URL),
-          headers: <String, String>{
-            'Content-Type': 'application/json',
-            'Authorization':
-                'Bearer $accessToken', // Use Access Token for Authorization
-          },
-          body: jsonEncode(notification),
-        );
+      Uri.parse(BASE_URL),
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+        'Authorization': 'key=$KEY_SERVER',
+      },
+      body: jsonEncode(notification),
+    );
 
     // Check the response status code
     if (response.statusCode == 200) {
@@ -299,25 +347,65 @@ Future<void> sendNotificationBackToChecker(String workID) async {
   }
 }
 
+  
 
+  Future<void> _sendPushNotification(
+      String firstName, String deviceToken) async {
+    const String serverKey =
+        'AAAAa2amNh0:APA91bFwHRDkkJCKaYfe2LYnYrh7B_oo3iSvBz278nPof6MVWJNySoAH8AW0_zmVqT5xg6F7Ic1g3aVMS_sUDJ5k0IkjZ3sxNCMpnFGlRES07bwJu9ABT6r2DJRG-InhaMGREfCwwx1u'; // Replace with your FCM server key
+    const String fcmEndpoint = 'https://fcm.googleapis.com/fcm/send';
 
-  Future<void> showNotification(String title, String body) async {
+    final Map<String, dynamic> notification = {
+      'title': 'Hello,$firstName!',
+      'body': 'You have a new notification.',
+      'sound': 'default',
+    };
+
+    final Map<String, dynamic> data = {
+      'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+      'first_name': firstName,
+    };
+
+    final Map<String, dynamic> payload = {
+      'to': deviceToken,
+      'notification': notification,
+      'data': data,
+    };
+
+    final http.Response response = await http.post(
+      Uri.parse(fcmEndpoint),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'key=$serverKey',
+      },
+      body: json.encode(payload),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to send notification: ${response.body}');
+    }
+
+    // Show the notification locally as well
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'your_channel_id',
-      'your_channel_name',
+      'your_channel_id', // channel ID
+      'your_channel_name', // channel name
+      channelDescription: 'your channel description', // channel description
       importance: Importance.max,
       priority: Priority.high,
-      playSound: true,
-      icon: '@mipmap/ic_launcher',
+      ticker: 'ticker',
     );
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+
     await _notificationsPlugin.show(
-      0,
-      title,
-      body,
+      0, // Notification ID
+      notification['title'],
+      notification['body'],
       platformChannelSpecifics,
+      payload: 'Not present',
     );
   }
 
@@ -333,9 +421,10 @@ Future<void> sendNotificationBackToChecker(String workID) async {
           notification.body,
           NotificationDetails(
             android: AndroidNotificationDetails(
-              'your_channel_id',
-              'your_channel_name',
-              channelDescription: 'your channel description',
+              'your_channel_id', // channel ID
+              'your_channel_name', // channel name
+              channelDescription:
+                  'your channel description', // channel description
               icon: '@mipmap/ic_launcher',
             ),
           ),
@@ -344,61 +433,6 @@ Future<void> sendNotificationBackToChecker(String workID) async {
     });
   }
 
-  Future<String?> getCheckerDeviceToken(String checkerFirstName) async {
-    try {
-      final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('Employee')
-          .where('Firstname', isEqualTo: checkerFirstName)
-          .limit(1)
-          .get();
-      if (querySnapshot.docs.isNotEmpty) {
-        final DocumentSnapshot doc = querySnapshot.docs.first;
-        return doc['DeviceToken'];
-      }
-    } catch (e) {
-      print('Error fetching checker device token: $e');
-    }
-    return null;
-  }
-
-  // Get Access Token from Service Account
-  Future<String> getAccessToken() async {
-    try {
-      final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
-      final serviceAccountCredentials =
-          auth.ServiceAccountCredentials.fromJson({
-        "type": "service_account",
-        "project_id": "namyongapp",
-        "private_key_id": "e1d7c620f03d612b56468285d6d46c0fb8f2ac38",
-        "private_key":
-            "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCdCBAA0Qa+Pwwo\nD7SvkWB0wWaaV/ezdCaJTDFOjvRA1HKEtZyFVRXjfKujraEQ4oE/CaF/vJo+36oP\ngA4DwZ9ss7epioKvXl4J1oEjn2S+tcvBP+/zTgvPim1SJHCnJf6L0rFyjjE/TxsT\nEKHW6b7BHLuxpizoWqVzqXs4kb09erlgjj6HUBfkCdy/s5FdVWpK/8Yzos6G9RWP\ns+F0XgNsA643jd1XRPwniIsf0NPfaJjzTNV2B3O/q88kpgg5AmNzk+1EG22fyKea\nr6q6v1y8+hdaNvyGrlZ6ycDREz1t6QA6k8GPTVFN6QyQnSbIIvrqOSmDCBAX3zSo\n/lJQFWdbAgMBAAECggEAEKhSSkPiGzxE5dsEp7scKEZ7w9OhCwA/NkFG2baAYoAm\nxb0eJWapM8B91JcOhuQAIde7sfknw5OmTo6e7fcUGkvWJ73xrvirsQ94E3dNEI3o\nV0+Y/I5C4nkkr5n9+T0mi16GREihIL4beSJCiLGy8nlBz8545Qz4kBRiZdXP5T18\n7fewVDPkmOR9Q4Nb7eFdCOxIHXntCQQWfpfaSjSLmFXIhY6RtPnEEseJZproaDTI\nywYQly5ofm5w0pBSe+cfvF3o1rIj6Tn9k67LAoGXbXQrc3sBFi28kLAUrYlc9Dtf\ne1icxjyM/vGT6X3H+M9lJ9TFUt/K0ct38O39yknWQQKBgQDOtQOn7JYUGbvbqo/n\nCwgr1q1ehBjgiCfwV+BKh3kOYwcJZ6Qjbja2dHcKnfra294EGb5S8el5LqBqZDla\nRdBIL0iWWXXfU1fLhqssHqaxJ7Wu8dH0ABpR7ExNVrWJuxT+FCwt/+Fo9Z6cFTsh\nTIahYTlXRR+7Y0TVQ9btGuoUNwKBgQDCengXff7rdSC0fRtv8l1W0j+DUAQXuA7b\neLKQEvCG+Qc3sLhDDzmJ4JjcMYxceJj6yRoDWp3X69Fi8naCfUzHxNKo8CJd3JLI\nIbPTHBMAdeh2RDd/f0G5ydORnTMwZjjqoT7rGKcAX2nbAtUnHj+g2tMl6zvJAruY\n+R1tJr97/QKBgQCaRJAQ8EnlgHsqavXw2dPkW9iR1IZ4dEVSY1MabFbVfOSQiU//\nvU6KBwuc2eCRHExqxQe9AZxce4bvQBNpovbaGKfUxblpzdqVI9F2IP4I8vjuMr2d\nm8II6BDeG1trCjuVkFqUjgadfco89L9nj6Repp/T2Nvgzypc+79Yv6B5KwKBgEiw\nG5i0OAZrZcjwBcRGswpTVPfQfWccHTl8mEjvO0VHaKIxA/3Uf+3/q0KJpmudi5gY\neAeO4/YjJsSz2QWWrY7xCsen0UCBw77Xke2yzYtbhoJFpvSZbMhzHgeL2OkbG+Te\nVbTrJuglwVvhaCfRz3hgsZC3pkXQJqvbWFtGo0VFAoGBAK0e51dT3pMyHiKFFbBB\n26wvGytobiTo5APK7xA8f6B7DW8etjJE+BfDRKipY+dhSHFwxZbjuleRtLT2QnRp\nicAt/YvnH8re6Uwp3rXTOlCwiFyXpWaA9KG9JuwGK2Q2UesjsUiSJPLxju0oixRZ\nnFrsEPIJi3QA9DP5Oo1kbgNT\n-----END PRIVATE KEY-----\n",
-        "client_email":
-            "firebase-adminsdk-mx3d3@namyongapp.iam.gserviceaccount.com",
-        "client_id": "113502189183337165580",
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url":
-            "https://www.googleapis.com/oauth2/v1/certs",
-        "client_x509_cert_url":
-            "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-mx3d3%40namyongapp.iam.gserviceaccount.com",
-        "universe_domain": "googleapis.com"
-      });
-
-      final client = await auth.clientViaServiceAccount(
-        serviceAccountCredentials,
-        scopes,
-      );
-
-      final accessToken = client.credentials.accessToken.data;
-      client.close();
-      print('Access Token: $accessToken');
-      return accessToken;
-    } catch (error) {
-      print('Error fetching access token: $error');
-      return 'Error fetching access token';
-    }
-  }
-  
   Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Handle background message
   print('Handling a background message: ${message.messageId}');
@@ -427,4 +461,5 @@ Future<void> sendNotificationBackToChecker(String workID) async {
     );
   }
 }
+
 }

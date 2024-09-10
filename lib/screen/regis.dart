@@ -1,9 +1,11 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:namyong_demo/screen/Dashboard.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -21,8 +23,8 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void initState() {
     super.initState();
-    _firebaseMessaging.getToken().then((deviceToken) {
-      print('Device Token: $deviceToken');
+    _firebaseMessaging.getToken().then((fcmToken) {
+      print('FCM Token: $fcmToken');
     });
   }
 
@@ -131,6 +133,7 @@ class FillInfoPage extends StatefulWidget {
   _FillInfoPageState createState() => _FillInfoPageState();
 }
 
+
 class _FillInfoPageState extends State<FillInfoPage> {
   final TextEditingController _employeeIDController = TextEditingController();
   final TextEditingController _firstNameController = TextEditingController();
@@ -138,8 +141,29 @@ class _FillInfoPageState extends State<FillInfoPage> {
   String _selectedRole = '';
   XFile? _signatureImage;
 
-  void _saveUserInfo(String deviceToken) async {
+  // Function to upload an image to Firebase Storage and return its download URL
+  Future<String?> _uploadImageToStorage(XFile? image, String folderName) async {
+    if (image == null) return null;
+
     try {
+      final fileName = '${widget.user?.uid}_${DateTime.now().millisecondsSinceEpoch}.png';
+      final ref = FirebaseStorage.instance.ref().child('$folderName/$fileName');
+      final uploadTask = ref.putFile(File(image.path));
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
+    }
+  }
+
+  void _saveUserInfo(String fcmToken) async {
+    try {
+      // Upload the profile and signature images to Firebase Storage
+      final profileImageUrl = await _uploadImageToStorage(widget.profileImage, 'profile_images');
+      final signatureImageUrl = await _uploadImageToStorage(_signatureImage, 'signature_images');
+
       if (widget.user != null) {
         await FirebaseFirestore.instance.collection('Employee').doc(widget.user!.uid).set({
           'Email': widget.email,
@@ -148,9 +172,9 @@ class _FillInfoPageState extends State<FillInfoPage> {
           'Lastname': _lastNameController.text,
           'Role': _selectedRole,
           'Password': widget.password,
-          'DeviceToken': deviceToken,
-          'ProfileImageURL': widget.profileImage != null ? widget.profileImage!.path : null,
-          'SignatureImageURL': _signatureImage != null ? _signatureImage!.path : null,
+          'FCMToken': fcmToken,
+          'ProfileImageURL': profileImageUrl,
+          'SignatureImageURL': signatureImageUrl,
         });
 
         Navigator.pushReplacement(
@@ -171,7 +195,6 @@ class _FillInfoPageState extends State<FillInfoPage> {
       _signatureImage = image;
     });
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -255,8 +278,8 @@ class _FillInfoPageState extends State<FillInfoPage> {
             SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: () {
-                widget._firebaseMessaging.getToken().then((deviceToken) {
-                  _saveUserInfo(deviceToken ?? '');
+                widget._firebaseMessaging.getToken().then((fcmToken) {
+                  _saveUserInfo(fcmToken ?? '');
                 });
               },
               child: Text('Save Information'),

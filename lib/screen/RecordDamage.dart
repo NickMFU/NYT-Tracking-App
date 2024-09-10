@@ -1,11 +1,12 @@
 import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:uuid/uuid.dart';
-import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 
 class RecordDamagePage extends StatefulWidget {
   final String workID;
@@ -35,7 +36,7 @@ class _RecordDamagePageState extends State<RecordDamagePage> {
         toolbarHeight: 100,
         title: const Text(
           "Record Damage",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,color: Colors.white),
         ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -84,7 +85,26 @@ class _RecordDamagePageState extends State<RecordDamagePage> {
             const SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: getImage,
-              child: const Text('Select Image'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color.fromARGB(255, 4, 6, 126), // Background color
+              ),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.05,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child:
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text(
+                    "Select Image",
+                    style: GoogleFonts.dmSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color.fromARGB(255, 255, 255, 255),
+                    ),
+                  ),
+                ]),
+              ),
             ),
             SizedBox(
               height: 100,

@@ -54,14 +54,16 @@ dependencies:
   open_file: ^3.3.2
   path_provider: ^2.1.2
   shimmer: ^3.0.0
-  http: ^1.2.1
+  http: ^1.2.2
   flutter_local_notifications: ^17.2.2
   fl_chart: ^0.66.2
-  lottie: ^3.1.0
   intl: ^0.17.0
   signature: ^5.4.1
   uuid: ^4.4.0
-  
+  permission_handler: ^11.3.1
+  timezone: ^0.9.4
+  workmanager: ^0.5.0
+  googleapis_auth: ^1.6.0
 
 dependency_overrides:
   image_picker_for_web: ^3.0.4
@@ -100,6 +102,7 @@ flutter:
     - assets/images/
     - assets/lottie/
     - assets/fonts/
+    - assets/namyongapp-firebase-adminsdk-mx3d3-e1d7c620f0.json
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 

@@ -1,6 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ScanBarcodePage extends StatefulWidget {
@@ -16,6 +16,7 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
   List<String> _scannedBarcodes = [];
   late CollectionReference _scanBarcodeCollection;
   TextEditingController _tractorRegistrationController = TextEditingController();
+  bool _isButtonEnabled = false;
 
   @override
   void initState() {
@@ -24,6 +25,17 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
         .collection('works')
         .doc(widget.workID)
         .collection('Scanbarcode');
+
+    // Add listener to the text field to update button state
+    _tractorRegistrationController.addListener(_updateButtonState);
+  }
+
+  void _updateButtonState() {
+    // Update the button state based on input
+    setState(() {
+      _isButtonEnabled = _tractorRegistrationController.text.isNotEmpty &&
+          _scannedBarcodes.isNotEmpty;
+    });
   }
 
   @override
@@ -36,7 +48,7 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
         toolbarHeight: 100,
         title: const Text(
           "Load car to tractor",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,color: Colors.white),
         ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -58,45 +70,46 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           TextField(
             controller: _tractorRegistrationController,
             decoration: const InputDecoration(
               labelText: 'Tractor Registration',
               border: OutlineInputBorder(),
             ),
+            onChanged: (value) => _updateButtonState(),
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           ElevatedButton(
-  onPressed: _scanBarcode,
-  style: ElevatedButton.styleFrom(
-    backgroundColor: Color.fromARGB(255, 4, 6, 126), // Background color
-  ),
-  child: Container(
-    height: MediaQuery.of(context).size.height * 0.05,
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(5),
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(
-          Icons.camera_alt, // Choose the appropriate icon
-          color: Colors.white, // Icon color
-        ),
-        SizedBox(width: 8), // Add some space between icon and text
-        Text(
-          "Scan Barcode",
-          style: GoogleFonts.dmSans(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Color.fromARGB(255, 255, 255, 255),
+            onPressed: _scanBarcode,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color.fromARGB(255, 4, 6, 126), // Background color
+            ),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.05,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.camera_alt, // Choose the appropriate icon
+                    color: Colors.white, // Icon color
+                  ),
+                  SizedBox(width: 8), // Add some space between icon and text
+                  Text(
+                    "Scan Barcode",
+                    style: GoogleFonts.dmSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color.fromARGB(255, 255, 255, 255),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
-    ),
-  ),
-),
           SizedBox(height: 20),
           Expanded(
             child: ListView.builder(
@@ -117,27 +130,32 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
-              onPressed: _saveScannedBarcodes,
+              onPressed: _isButtonEnabled ? _saveScannedBarcodes : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    Color.fromARGB(255, 4, 6, 126), // Background color
+                backgroundColor: _isButtonEnabled
+                    ? Color.fromARGB(255, 4, 6, 126)
+                    : Colors.grey, // Disable button when not enabled
               ),
               child: Container(
                 height: MediaQuery.of(context).size.height * 0.05,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(5),
                 ),
-                child:
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text(
-                    "Load to Tractor",
-                    style: GoogleFonts.dmSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color.fromARGB(255, 255, 255, 255),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Center(
+                      child: Text(
+                        "Load to Tractor",
+                        style: GoogleFonts.dmSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color.fromARGB(255, 255, 255, 255),
+                        ),
+                      ),
                     ),
-                  ),
-                ]),
+                  ],
+                ),
               ),
             ),
           ),
@@ -159,6 +177,7 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
 
       setState(() {
         _scannedBarcodes.add(barcodeResult);
+        _updateButtonState(); // Update button state after scanning
       });
     } catch (e) {
       // Handle error
@@ -185,10 +204,9 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
           duration: Duration(seconds: 2),
         ),
       );
-
-      // Clear scanned barcodes after saving
       setState(() {
         _scannedBarcodes.clear();
+        _updateButtonState(); // Update button state after saving
       });
     } catch (e) {
       print('Error saving barcodes: $e');
@@ -204,6 +222,7 @@ class _ScanBarcodePageState extends State<ScanBarcodePage> {
   void _deleteBarcode(int index) {
     setState(() {
       _scannedBarcodes.removeAt(index);
+      _updateButtonState(); // Update button state after deleting
     });
   }
 

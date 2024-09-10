@@ -1,6 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:namyong_demo/model/Work.dart';
 import 'package:namyong_demo/screen/EditWork.dart';
 import 'package:namyong_demo/screen/Timeline.dart';
@@ -12,7 +12,6 @@ class OnProgressWorkPage extends StatefulWidget {
 
 class _OnProgressWorkPageState extends State<OnProgressWorkPage> {
   late String _firstName = '';
-  late String _lastName = '';
 
   @override
   void initState() {
@@ -30,7 +29,6 @@ class _OnProgressWorkPageState extends State<OnProgressWorkPage> {
             .get();
         setState(() {
           _firstName = userData['Firstname'];
-          _lastName = userData['Lastname'];
         });
       } catch (e) {
         print('Error loading user data: $e');
@@ -48,7 +46,7 @@ class _OnProgressWorkPageState extends State<OnProgressWorkPage> {
         toolbarHeight: 100,
         title: const Text(
           "On Progress Work",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,color: Colors.white),
         ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(

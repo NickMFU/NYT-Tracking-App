@@ -1,17 +1,19 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:namyong_demo/Component/bottom_nav.dart';
 import 'package:namyong_demo/component/form_field.dart';
 import 'package:namyong_demo/model/Work.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:math';
-
-import 'package:namyong_demo/service/constants.dart';
+import 'package:namyong_demo/screen/DashBoard.dart';
+import 'package:namyong_demo/service/firebase_api.dart';
+import 'package:namyong_demo/service/notification_service.dart';
 
 class CreateWorkPage extends StatefulWidget {
   const CreateWorkPage({super.key});
@@ -21,7 +23,7 @@ class CreateWorkPage extends StatefulWidget {
 }
 
 class _CreateWorkPageState extends State<CreateWorkPage> {
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final String? currentUserID = FirebaseAuth.instance.currentUser?.uid;
 
   final TextEditingController _dateController = TextEditingController();
@@ -31,20 +33,22 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
   final TextEditingController _blNoController = TextEditingController();
   final TextEditingController _shippingController = TextEditingController();
   final TextEditingController _employeeIdController = TextEditingController();
+  final LNotificationService notificationService = LNotificationService();
 
   String? _dispatcherID; // Variable to store dispatcherID
-  String? _role; 
+  String? _role;
   List<String> employees = [];
   final ImagePicker _imagePicker = ImagePicker();
   File? _image;
   TimeOfDay? _estimatedCompletionTime;
+  bool _isSignatureStamped = false;
 
   @override
   void initState() {
     super.initState();
     fetchEmployees();
     _getDispatcherID();
-     _loadRoleData();
+    _loadRoleData();
   }
 
   void fetchEmployees() async {
@@ -130,8 +134,13 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
     }
   }
 
+  void sendNotificationToUser(String firstName, String deviceToken) async {
+    LNotificationService notificationService = LNotificationService();
+    notificationService.initialize();
+  }
+
   @override
-   Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
     int _currentIndex = 1;
     return _role == 'Dispatcher'
         ? Scaffold(
@@ -141,7 +150,10 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               toolbarHeight: 100,
               title: const Text(
                 "Create work page",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
               ),
               flexibleSpace: Container(
                 decoration: const BoxDecoration(
@@ -160,198 +172,228 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
                 ),
               ),
             ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: EdgeInsets.all(16.0),
-          children: [
-            // Title above the form fields
-            const Text(
-              "WharfID (BL/No) เลขใบวาป",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20.0),
-            DefaultFormField(
-              hint: 'WharfID (BL/No)',
-              controller: _blNoController,
-              validText: 'Please enter a BL number',
-              textInputType: TextInputType.text,
-            ),
-            const SizedBox(height: 15.0),
-            const Text(
-              "Date-วันที่",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 15.0),
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'Date',
-                labelText: 'Date', // Optional label text
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blue, width: 2.0),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                prefixIcon: Icon(Icons.calendar_today),
-              ),
-              controller: _dateController,
-              readOnly: true, // Set to true to prevent direct text input
-              onTap: () async {
-                final DateTime? pickedDate = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2101),
-                );
+            body: Form(
+              key: _formKey,
+              child: ListView(
+                padding: EdgeInsets.all(16.0),
+                children: [
+                  // Title above the form fields
+                  const Text(
+                    "WharfID (BL/No) เลขใบวาป",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 20.0),
+                  DefaultFormField(
+                    hint: 'WharfID (BL/No)',
+                    controller: _blNoController,
+                    validText: 'Please enter a BL number',
+                    textInputType: TextInputType.text,
+                  ),
+                  const SizedBox(height: 15.0),
+                  const Text(
+                    "Date-วันที่",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15.0),
+                  TextFormField(
+                    decoration: InputDecoration(
+                      hintText: 'Date',
+                      labelText: 'Date', // Optional label text
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.blue, width: 2.0),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.calendar_today),
+                    ),
+                    controller: _dateController,
+                    readOnly: true, // Set to true to prevent direct text input
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select a date';
+                      }
+                      return null;
+                    },
+                    onTap: () async {
+                      final DateTime? pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2101),
+                      );
 
-                if (pickedDate != null) {
-                  setState(() {
-                    _dateController.text =
-                        DateFormat('yyyy-MM-dd').format(pickedDate);
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 15.0),
-            const Text(
-              "Consignee",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 15.0),
-            DefaultFormField(
-              hint: 'Consignee',
-              controller: _consigneeController,
-              validText: 'Please enter a consignee',
-              textInputType: TextInputType.text,
-            ),
-            const SizedBox(height: 15.0),
-            const Text(
-              "Vessel",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 15.0),
-            DefaultFormField(
-              hint: 'Vessel',
-              controller: _vesselController,
-              validText: 'Please enter a vessel',
-            ),
-            const SizedBox(height: 15.0),
-            const Text(
-              "Voy",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 15.0),
-            DefaultFormField(
-              hint: 'Voy',
-              controller: _voyController,
-              validText: 'Please enter a voyage number',
-            ),
-            const SizedBox(height: 15.0),
-            const Text(
-              "Shipping",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 15.0),
-            DefaultFormField(
-              hint: 'Shipping',
-              controller: _shippingController,
-              validText: 'Please enter shipping information',
-            ),
-            const SizedBox(height: 15.0),
-            const Text(
-              "Choose Checker",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 15.0),
-            DropdownButtonFormField<String>(
-              value: employees.contains(_employeeIdController.text)
-                  ? _employeeIdController.text
-                  : null,
-              onChanged: (value) {
-                setState(() {
-                  _employeeIdController.text = value ?? '';
-                });
-              },
-              items: employees
-                  .map((employee) => DropdownMenuItem<String>(
-                        value: employee,
-                        child: Text(employee),
-                      ))
-                  .toList(),
-              decoration: const InputDecoration(
-                labelText: 'Select CheckerS',
-              ),
-            ),
-            const SizedBox(height: 16.0),
-            const Text(
-              "Due time",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 15.0),
-            ListTile(
-              title: Text(
-                'Set due time: ${_estimatedCompletionTime != null ? _estimatedCompletionTime!.format(context) : "Not set"}',
-              ),
-              onTap: () async {
-                final pickedTime = await showTimePicker(
-                  context: context,
-                  initialTime: _estimatedCompletionTime ?? TimeOfDay.now(),
-                );
-                if (pickedTime != null) {
-                  setState(() {
-                    _estimatedCompletionTime = pickedTime;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 16.0),
-            const Text(
-              "Whalf Image",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 15.0),
-            ListTile(
-              title: _image == null
-                  ? const Text('Select Image')
-                  : Image.file(_image!),
-              onTap: () async {
-                await getImage();
-              },
-            ),
-            const SizedBox(height: 16.0),
-
-            ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  sendNotificationToChecker(_employeeIdController.text);
-                  saveWorkToFirebase();
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    Color.fromARGB(255, 4, 6, 126), // Background color
-              ),
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.05,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child:
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text(
-                    "Create Work",
-                    style: GoogleFonts.dmSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color.fromARGB(255, 255, 255, 255),
+                      if (pickedDate != null) {
+                        setState(() {
+                          _dateController.text =
+                              DateFormat('yyyy-MM-dd').format(pickedDate);
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 15.0),
+                  const Text(
+                    "Consignee",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15.0),
+                  DefaultFormField(
+                    hint: 'Consignee',
+                    controller: _consigneeController,
+                    validText: 'Please enter a consignee',
+                    textInputType: TextInputType.text,
+                  ),
+                  const SizedBox(height: 15.0),
+                  const Text(
+                    "Vessel",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15.0),
+                  DefaultFormField(
+                    hint: 'Vessel',
+                    controller: _vesselController,
+                    validText: 'Please enter a vessel',
+                  ),
+                  const SizedBox(height: 15.0),
+                  const Text(
+                    "Voy",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15.0),
+                  DefaultFormField(
+                    hint: 'Voy',
+                    controller: _voyController,
+                    validText: 'Please enter a voyage number',
+                  ),
+                  const SizedBox(height: 15.0),
+                  const Text(
+                    "Shipping",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15.0),
+                  DefaultFormField(
+                    hint: 'Shipping',
+                    controller: _shippingController,
+                    validText: 'Please enter shipping information',
+                  ),
+                  const SizedBox(height: 15.0),
+                  const Text(
+                    "Choose Checker",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15.0),
+                  DropdownButtonFormField<String>(
+                    value: employees.contains(_employeeIdController.text)
+                        ? _employeeIdController.text
+                        : null,
+                    onChanged: (value) {
+                      setState(() {
+                        _employeeIdController.text = value ?? '';
+                      });
+                    },
+                    items: employees
+                        .map((employee) => DropdownMenuItem<String>(
+                              value: employee,
+                              child: Text(employee),
+                            ))
+                        .toList(),
+                    decoration: const InputDecoration(
+                      labelText: 'Select CheckerS',
                     ),
                   ),
-                ]),
+                  const SizedBox(height: 16.0),
+                  const Text(
+                    "Due time",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15.0),
+                  ListTile(
+                    title: Text(
+                      'Set due time: ${_estimatedCompletionTime != null ? _estimatedCompletionTime!.format(context) : "Not set"}',
+                    ),
+                    onTap: () async {
+                      final pickedTime = await showTimePicker(
+                        context: context,
+                        initialTime:
+                            _estimatedCompletionTime ?? TimeOfDay.now(),
+                      );
+                      if (pickedTime != null) {
+                        setState(() {
+                          _estimatedCompletionTime = pickedTime;
+                        });
+                        // Schedule the notification
+                        await AlarmNotificationService
+                            .scheduleAlarmNotification(pickedTime);
+
+                        // Show confirmation
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text(
+                                  'Alarm set for ${pickedTime.format(context)}')),
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16.0),
+                  const Text(
+                    "Whalf Image",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15.0),
+                  ListTile(
+                    title: _image == null
+                        ? const Text('Select Image')
+                        : Image.file(_image!),
+                    onTap: () async {
+                      await getImage();
+                    },
+                  ),
+                  const SizedBox(height: 16.0),
+                  // Add CheckboxListTile for "Stamp Signature"
+                  CheckboxListTile(
+                    title: const Text("Stamp Signature"),
+                    value: _isSignatureStamped,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _isSignatureStamped = value ?? false;
+                      });
+                    },
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+
+                  ElevatedButton(
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        saveWorkToFirebase();
+                        notificationService.sendNotificationToChecker(
+                            _employeeIdController.text);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Color.fromARGB(255, 4, 6, 126), // Background color
+                    ),
+                    child: Container(
+                      height: MediaQuery.of(context).size.height * 0.05,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Create Work",
+                              style: GoogleFonts.dmSans(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color.fromARGB(255, 255, 255, 255),
+                              ),
+                            ),
+                          ]),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
-     bottomNavigationBar: BottomNavBar(
+            bottomNavigationBar: BottomNavBar(
               currentIndex: _currentIndex,
               onTap: (int index) {
                 setState(() {
@@ -366,10 +408,33 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               elevation: 0.0,
             ),
             backgroundColor: Colors.white,
-            body: const Center(
-              child: Text(
-                'You do not have permission to access this page.',
-                style: TextStyle(fontSize: 18),
+            body: Center(
+              child: Card(
+                elevation: 4.0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                margin: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 48,
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        'You do not have permission to access this page.',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
             bottomNavigationBar: BottomNavBar(
@@ -382,6 +447,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
             ),
           );
   }
+
   Future<void> showLoadingDialog(BuildContext context) async {
     return showDialog<void>(
       context: context,
@@ -400,17 +466,17 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
     );
   }
 
+  void handleSignatureStamping() {
+    if (_isSignatureStamped) {
+      _getSignature();
+    }
+  }
+
   Future<void> saveWorkToFirebase() async {
     try {
       showLoadingDialog(context);
       final CollectionReference workCollection =
           FirebaseFirestore.instance.collection('works');
-
-      final User? currentUser = FirebaseAuth.instance.currentUser;
-      final String? firstName =
-          currentUser?.displayName?.split(' ')[0]; // Extract first name
-      final String? lastName =
-          currentUser?.displayName?.split(' ')[1]; // Extract last name
 
       String workID = 'Work_${Random().nextInt(90000) + 10000}';
 
@@ -435,30 +501,37 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
               )
             : null,
         employeeId: checkerName, // Set the checker's name as the employeeId
-
         dispatcherID: _dispatcherID ?? '',
-        // Set the dispatcher's first name as the DispatcherID
         imageUrl: imageUrl, // Set the imageUrl in the Work model
-        statuses: ['NoStatus'], // Set the initial status as "NoStatus"
+        statuses: ['NoStatus'],
       );
 
       Map<String, dynamic> workData = work.toMap();
       await workCollection.doc(workID).set(workData);
       print('Work data saved to Firestore successfully! WorkID: $workID');
       Navigator.pop(context); // Close the loading dialog
+
+      // Show success message and navigate to dashboard
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Work created successfully!"),
           duration: Duration(seconds: 3),
         ),
       );
+
+      // Navigate to dashboard
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+            builder: (context) =>
+                const Dashboard()), // Replace with your actual dashboard page widget
+        (Route<dynamic> route) => false,
+      );
     } catch (e) {
       print('Error saving work data: $e');
-      // Close the loading dialog on error
       Navigator.pop(context); // Close the loading dialog
-      // Show error message to the user
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text("Failed to create work. Please try again."),
           duration: Duration(seconds: 3),
         ),

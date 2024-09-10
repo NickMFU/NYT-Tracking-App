@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:namyong_demo/screen/pdf_mainfest.dart';
 
@@ -159,9 +159,11 @@ class Summarywork extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildBarcodeDetail('VinNo', barcodeData['barcode1']),
                 _buildBarcodeDetail(
                     'Tractor Registration', barcodeData['tractorRegistration']),
+                _buildBarcodeDetail('VinNo1', barcodeData['barcode1']),
+                _buildBarcodeDetail('VinNo2', barcodeData['barcode2']),
+                _buildBarcodeDetail('VinNo3', barcodeData['barcode3']),
               ],
             );
           }).toList(),

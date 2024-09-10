@@ -8,9 +8,10 @@ class Work {
   final String shipping;
   final Duration? estimatedCompletionTime;
   final String employeeId;
-  final String responsiblePerson;
   final String imageUrl;
-  List<String> statuses;
+  final String dispatcherID;
+
+  List<String> _statuses; // Encapsulated statuses field
 
   Work({
     required this.workID,
@@ -22,10 +23,10 @@ class Work {
     required this.shipping,
     required this.estimatedCompletionTime,
     required this.employeeId,
-    required this.responsiblePerson,
     required this.imageUrl,
-    required this.statuses,
-  });
+    required this.dispatcherID,
+    required List<String> statuses, // Modified to accept List<String> statuses
+  }) : _statuses = statuses; // Initialize the encapsulated statuses field
 
   factory Work.fromMap(Map<String, dynamic> map) {
     return Work(
@@ -40,8 +41,8 @@ class Work {
           ? Duration(milliseconds: map['estimatedCompletionTime'])
           : null,
       employeeId: map['employeeId'],
-      responsiblePerson: map['responsiblePerson'],
       imageUrl: map['imageUrl'],
+      dispatcherID: map['dispatcherID'],
       statuses: List<String>.from(map['statuses'] ?? []),
     );
   }
@@ -57,19 +58,24 @@ class Work {
       'shipping': shipping,
       'estimatedCompletionTime': estimatedCompletionTime?.inMilliseconds,
       'employeeId': employeeId,
-      'responsiblePerson': responsiblePerson,
       'imageUrl': imageUrl,
-      'statuses': statuses,
+      'dispatcherID': dispatcherID,
+      'statuses': _statuses, // Use the encapsulated statuses field
     };
   }
 
   // Method to add a new status
   void addStatus(String newStatus) {
-    statuses.add(newStatus);
+    _statuses.add(newStatus);
   }
 
-  // Method to update the status
+  // Method to update the status at a specific index
   void updateStatus(String newStatus, int index) {
-    statuses[index] = newStatus;
+    if (index >= 0 && index < _statuses.length) {
+      _statuses[index] = newStatus;
+    }
   }
+
+  // Getter to access the statuses list
+  List<String> get statuses => _statuses;
 }

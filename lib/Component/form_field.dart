@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class DefaultFormField extends StatelessWidget {
-   
+  
   final String hint;
   final bool isPassword;
   final TextInputType? textInputType;
@@ -56,7 +56,7 @@ class DefaultFormField extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
               border: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.blue, width: 2.0), // Set blue border here
+                borderSide: const BorderSide(color: Color.fromARGB(255, 28, 0, 154), width: 2.0), // Set blue border here
                 borderRadius: BorderRadius.circular(12),
               ),
               prefixIcon: prefixWidget,
@@ -74,13 +74,13 @@ class DefaultFormField extends StatelessWidget {
               filled: true,
               fillColor: Colors.grey.shade100,
               hintText: hint,
-              hintStyle: GoogleFonts.roboto(
+              hintStyle: GoogleFonts.notoSansThai(
                 fontSize: 15.0,
                 color: Colors.grey[400],
                 fontWeight: FontWeight.w500,
               ),
               border: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.blue, width: 2.0), // Set blue border here
+                borderSide: const BorderSide(color: Colors.blue, width: 2.0), // Set blue border here
                 borderRadius: BorderRadius.circular(12),
               ),
               prefixIcon: prefixWidget,
@@ -92,7 +92,7 @@ class DefaultFormField extends StatelessWidget {
                 color: Colors.grey.shade400,
               ),
             ),
-            style: GoogleFonts.roboto(
+            style: GoogleFonts.notoSansThai(
               color: Colors.black,
               fontSize: 15,
             ),

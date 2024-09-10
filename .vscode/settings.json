@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "C:/namyong_demo/linux"
+    "cmake.sourceDirectory": "C:/namyong_demo/linux",
+    "java.configuration.updateBuildConfiguration": "interactive"
 }

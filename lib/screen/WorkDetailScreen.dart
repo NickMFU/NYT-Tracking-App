@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:namyong_demo/screen/pdf_mainfest.dart';
 
 class WorkDetailsScreen extends StatelessWidget {
   final String workID;
@@ -12,8 +13,6 @@ class WorkDetailsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Color.fromARGB(255, 239, 247, 255),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.0,
         toolbarHeight: 100,
         title: Text(
           'Work Details - $workID',
@@ -32,7 +31,7 @@ class WorkDetailsScreen extends StatelessWidget {
             gradient: LinearGradient(
               colors: [
                 Color.fromARGB(224, 14, 94, 253),
-                Color.fromARGB(196, 14, 94, 253),
+                Color.fromARGB(255, 4, 6, 126),
               ],
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
@@ -47,8 +46,7 @@ class WorkDetailsScreen extends StatelessWidget {
             padding: EdgeInsets.all(16.0),
             child: FutureBuilder(
               future: getWorkData(),
-              builder:
-                  (context, AsyncSnapshot<Map<String, dynamic>?> snapshot) {
+              builder: (context, AsyncSnapshot<Map<String, dynamic>?> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
                 } else {
@@ -57,7 +55,14 @@ class WorkDetailsScreen extends StatelessWidget {
                   } else {
                     Map<String, dynamic>? workData = snapshot.data;
                     if (workData != null) {
-                      return _buildWorkCard(workData);
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildWorkCard(workData),
+                          SizedBox(height: 20),
+                          
+                        ],
+                      );
                     } else {
                       return Center(
                           child: Text('Work with ID $workID not found.'));
@@ -85,14 +90,25 @@ class WorkDetailsScreen extends StatelessWidget {
             _buildDetail('Date', workData['date']),
             _buildDetail('BL/No', workData['blNo']),
             _buildDetail('Consignee', workData['consignee']),
+            _buildDetail('Dispatcher',workData['dispatcherID']),
             _buildDetail('Checker', workData['employeeId']),
             _buildDetail('Vessel', workData['vessel']),
             _buildDetail('Voy', workData['voy']),
             _buildDetail('Shipping', workData['shipping']),
+            SizedBox(height: 20), // Add some space
+            _buildImage(workData['imageUrl']), // Display the image
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildImage(String? imageUrl) {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return Image.network(imageUrl); // Display image from URL
+    } else {
+      return SizedBox(); // Return empty container if no image URL is provided
+    }
   }
 
   Future<Map<String, dynamic>?> getWorkData() async {

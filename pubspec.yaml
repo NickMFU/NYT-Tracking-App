@@ -40,13 +40,13 @@ dependencies:
   get: ^4.6.6
   flutter_bloc: ^8.1.3
   timeline_tile: ^2.0.0
-  firebase_core: ^2.22.0
+  firebase_core: ^2.32.0
   firebase_analytics: ^10.6.4
   cloud_firestore: ^4.13.0
   flutter_barcode_scanner: ^2.0.0
   font_awesome_flutter: ^10.6.0
   shared_preferences: ^2.2.2
-  firebase_storage: ^11.5.0
+  firebase_storage: ^11.7.7
   image_picker: ^1.0.4
   firebase_auth: ^4.13.0
   firebase_messaging: ^14.7.16
@@ -54,6 +54,19 @@ dependencies:
   open_file: ^3.3.2
   path_provider: ^2.1.2
   shimmer: ^3.0.0
+  http: ^1.2.2
+  flutter_local_notifications: ^17.2.2
+  fl_chart: ^0.66.2
+  intl: ^0.17.0
+  signature: ^5.4.1
+  uuid: ^4.4.0
+  permission_handler: ^11.3.1
+  timezone: ^0.9.4
+  workmanager: ^0.5.0
+  googleapis_auth: ^1.6.0
+
+dependency_overrides:
+  image_picker_for_web: ^3.0.4
   
   
 
@@ -87,6 +100,9 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/images/
+    - assets/lottie/
+    - assets/fonts/
+    - assets/namyongapp-firebase-adminsdk-mx3d3-e1d7c620f0.json
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 
@@ -116,17 +132,17 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images/playstore-icon.png"
+  image_path: "assets/images/icon-192.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
   web:
     generate: true
-    image_path: "assets/images/playstore-icon.png"
+    image_path: "assets/images/play_store_512.png"
     background_color: "#hexcode"
     theme_color: "#hexcode"
   windows:
     generate: true
-    image_path: "assets/images/playstore-icon.png"
+    image_path: "assets/images/play_store_512.png"
     icon_size: 48 # min:48, max:256, default: 48
   macos:
     generate: true
-    image_path: "assets/images/playstore-icon.png"
+    image_path: "assets/images/play_store_512.png"

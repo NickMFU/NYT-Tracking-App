@@ -2,6 +2,7 @@
 
 Welcome to NYT-Tracking, your all-in-one solution for efficient and streamlined cargo management and tracking. This README file provides an overview of NYT-Tracking, its features, installation instructions, and usage guidelines.
 
+![Project Logo](https://github.com/NickMFU/NYT-Tracking-App/blob/main/Mobile%20App.png)
 ## Overview
 
 NYT-Tracking is a comprehensive system designed to digitize and optimize inbound product release work processes. From work order creation to product release, NYT-Tracking automates tasks, enhances visibility, and improves overall efficiency in cargo management.

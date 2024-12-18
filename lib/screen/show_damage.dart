@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 class ShowDamagePage extends StatefulWidget {
   final String workID;
@@ -39,7 +39,7 @@ class _ShowDamagePageState extends State<ShowDamagePage> {
         toolbarHeight: 100,
         title: const Text(
           "Damage Information",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white,),
         ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(

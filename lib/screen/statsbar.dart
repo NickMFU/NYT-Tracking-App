@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:namyong_demo/screen/Stats.dart';
+import 'package:flutter/material.dart';
+import 'package:namyong_demo/screen/statspie.dart';
 import 'package:namyong_demo/screen/time_report.dart';
 
 class StatsbarPage extends StatefulWidget {

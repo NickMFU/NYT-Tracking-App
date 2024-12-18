@@ -12,8 +12,8 @@ import 'package:namyong_demo/Component/bottom_nav.dart';
 import 'package:namyong_demo/component/form_field.dart';
 import 'package:namyong_demo/model/Work.dart';
 import 'package:namyong_demo/screen/DashBoard.dart';
+import 'package:namyong_demo/service/Alarm_noti.dart';
 import 'package:namyong_demo/service/firebase_api.dart';
-import 'package:namyong_demo/service/notification_service.dart';
 
 class CreateWorkPage extends StatefulWidget {
   const CreateWorkPage({super.key});
@@ -33,7 +33,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
   final TextEditingController _blNoController = TextEditingController();
   final TextEditingController _shippingController = TextEditingController();
   final TextEditingController _employeeIdController = TextEditingController();
-  final LNotificationService notificationService = LNotificationService();
+  final NotificationService notificationService = NotificationService();
 
   String? _dispatcherID; // Variable to store dispatcherID
   String? _role;
@@ -135,7 +135,7 @@ class _CreateWorkPageState extends State<CreateWorkPage> {
   }
 
   void sendNotificationToUser(String firstName, String deviceToken) async {
-    LNotificationService notificationService = LNotificationService();
+    NotificationService notificationService = NotificationService();
     notificationService.initialize();
   }
 

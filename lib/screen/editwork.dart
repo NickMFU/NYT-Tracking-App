@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 class EditWorkPage extends StatefulWidget {
   final String workID;
@@ -138,7 +138,7 @@ class _EditWorkPageState extends State<EditWorkPage> {
       ));
     } catch (e) {
       print('Error updating work data: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Error updating work data'),
         duration: Duration(seconds: 2),
       ));

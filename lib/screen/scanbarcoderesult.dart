@@ -21,7 +21,7 @@ class ScanBarcodeResultPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0.0,
         toolbarHeight: 100,
-        title: Text(
+        title: const Text(
           "Scanned Barcodes",
           style: TextStyle(
             fontSize: 24,

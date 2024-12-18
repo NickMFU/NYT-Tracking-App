@@ -19,7 +19,7 @@ class Summarywork extends StatelessWidget {
           style: GoogleFonts.dmSans(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: Colors.black,
+            color: Colors.white,
           ),
         ),
         flexibleSpace: Container(

@@ -157,7 +157,7 @@ class _AcceptWorkPageState extends State<AcceptWorkPage> {
                       ? work.statuses.last
                       : 'NoStatus';
                   if (_role == 'Checker') {
-                    return lastStatus == 'NoStatus';
+                    return lastStatus == 'NoStatus' && work.employeeId == _firstName;
                   } else if (_role == 'Gate out') {
                     return lastStatus == 'Waiting';
                   }

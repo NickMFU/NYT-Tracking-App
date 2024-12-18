@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:namyong_demo/screen/pdf_mainfest.dart';
 
 class WorkDetailsScreen extends StatelessWidget {
   final String workID;
@@ -19,7 +18,7 @@ class WorkDetailsScreen extends StatelessWidget {
           style: GoogleFonts.dmSans(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: Colors.black,
+            color: Colors.white,
           ),
         ),
         flexibleSpace: Container(

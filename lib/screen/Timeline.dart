@@ -34,8 +34,8 @@ class _TimelinePageState extends State<TimelinePage> {
   String? _role; // Nullable type for user's role
   String currentStatus = "";
   String name = ""; // Variable to track the current work status
-  final LNotificationService notificationService =
-      LNotificationService();
+  final NotificationService notificationService =
+      NotificationService();
 
   List<Color> _appBarGradientColors = [
     Color.fromARGB(224, 14, 94, 253),
@@ -417,35 +417,6 @@ class _TimelinePageState extends State<TimelinePage> {
                   );
                 },
               ),
-              if (allStepsConfirmed && isLastStep)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => Summarywork(
-                              workID: widget.workID,
-                            ),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                      ),
-                      child: Text(
-                        'Check Summary',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color.fromARGB(255, 255, 255, 255),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
             ],
           ),
         ),
@@ -462,6 +433,7 @@ class _TimelinePageState extends State<TimelinePage> {
                 ElevatedButton(
                   onPressed: () {
                     showConfirmationDialog();
+                    notificationService.sendNotificationBackToChecker(widget.workID);
                     _updateAppBarColor('In Progress');
                   },
                   style: ElevatedButton.styleFrom(
@@ -563,6 +535,7 @@ class _TimelinePageState extends State<TimelinePage> {
                     ),
                   ),
                 ),
+              if (!allStepsConfirmed)
               if ((_role == 'Gate out') && currentStep > 2)
                 ElevatedButton(
                   onPressed: () {
@@ -579,6 +552,35 @@ class _TimelinePageState extends State<TimelinePage> {
                       color: Color.fromARGB(255, 255, 255, 255),
                     ),
                   ),
+                ),
+                if (allStepsConfirmed && isLastStep)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => Summarywork(
+                              workID: widget.workID,
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      child: Text(
+                        'Check Summary',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color.fromARGB(255, 255, 255, 255),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ),

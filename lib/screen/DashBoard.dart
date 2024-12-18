@@ -6,16 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:namyong_demo/Component/bottom_nav.dart';
 import 'package:namyong_demo/model/Work.dart';
-import 'package:namyong_demo/screen/Stats.dart';
 import 'package:namyong_demo/screen/login.dart';
 import 'package:namyong_demo/screen/profile.dart';
-import 'package:namyong_demo/screen/test_noti_page.dart';
+import 'package:namyong_demo/screen/regis.dart';
+import 'package:namyong_demo/screen/statspie.dart';
 import 'package:namyong_demo/screen/work_status/allwork2.dart';
 import 'package:namyong_demo/screen/work_status/cancel_work.dart';
 import 'package:namyong_demo/screen/work_status/finish_work.dart';
 import 'package:namyong_demo/screen/work_status/onprocess_work.dart';
 import 'package:namyong_demo/screen/work_status/waiting_work.dart';
-import 'package:namyong_demo/service/notification_service.dart';
+import 'package:namyong_demo/service/Alarm_noti.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -27,43 +27,50 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
+  // Variables to hold user information like first name, last name, and role.
   late String _firstName = '';
   late String _lastName = '';
   late String role = '';
+  
+  // Keeps track of the currently selected bottom navigation tab.
   int _currentIndex = 0;
+  
+  // A flag to track whether a notification has been opened.
   bool hasNotification = false; 
   
-
+  // Initialize the state when the Dashboard widget is created.
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _loadUserData(); // Load the user's data from Firestore.
+    
+    // Listen for notification clicks when the app is opened from the background.
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       print('Notification clicked!');
       setState(() {
-        hasNotification = true; // Set the flag when a notification is opened
+        hasNotification = true; // Update the flag when a notification is clicked.
       });
     });
 
-    // Check initial message if the app was opened from a terminated state
+    // Check if the app was opened from a terminated state by a notification.
     _checkInitialMessage();
   }
 
+  // Function to check if the app was opened from a terminated state by clicking a notification.
   Future<void> _checkInitialMessage() async {
-    RemoteMessage? initialMessage =
-        await FirebaseMessaging.instance.getInitialMessage();
+    RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
       setState(() {
-        hasNotification = true; 
+        hasNotification = true; // Set the flag if the app opened from a notification.
+        // Show a custom notification using the AlarmNotificationService.
         AlarmNotificationService.showNewWorkNotification(
           'You have new work assigned:',
-        );// Set the flag if a notification opened the app
+        );
       });
     }
   }
 
-  
-
+  // Function to load the user's first name, last name, and role from Firestore.
   Future<void> _loadUserData() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -73,25 +80,24 @@ class _DashboardState extends State<Dashboard> {
             .doc(user.uid)
             .get();
         setState(() {
-          _firstName = userData['Firstname'];
-          _lastName = userData['Lastname'];
-          role = userData['Role'];
+          _firstName = userData['Firstname']; // Load first name.
+          _lastName = userData['Lastname']; // Load last name.
+          role = userData['Role']; // Load user's role.
         });
       } catch (e) {
-        print('Error loading user data: $e');
+        print('Error loading user data: $e'); // Handle errors.
       }
     }
   }
 
+  // Function to sign out the user, clear local preferences, and navigate to the login page.
   Future<void> _signOut() async {
-    // Clear SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await prefs.clear(); // Clear SharedPreferences.
 
-    // Optionally, sign out from FirebaseAuth
-    await FirebaseAuth.instance.signOut();
+    await FirebaseAuth.instance.signOut(); // Sign out the user from Firebase.
 
-    // Navigate back to the LoginPage
+    // Navigate back to the login page and remove all previous routes.
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => LoginPage()),
@@ -157,10 +163,7 @@ class _DashboardState extends State<Dashboard> {
                           child: Text('Logout'),
                           value: 'logout',
                         ),
-                        const PopupMenuItem(
-                          child: Text('Admin'),
-                          value: 'Admin',
-                        ),
+                        
                       ],
                       elevation: 8.0,
                     ).then((value) {
@@ -182,7 +185,7 @@ class _DashboardState extends State<Dashboard> {
                       } else if (value == 'Admin') {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => TestNotiPage()),
+                          MaterialPageRoute(builder: (context) => RegisterPage()),
                         );
                       }
                     });
@@ -229,9 +232,9 @@ class _DashboardState extends State<Dashboard> {
           stream: FirebaseFirestore.instance.collection('works').snapshots(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
-              return Center(child: CircularProgressIndicator());
+              return const Center(child: CircularProgressIndicator());
             }
-
+            //fetch work from database
             final docs = snapshot.data!.docs;
             int totalWorkCount = docs.where((doc) {
               var workData = doc.data() as Map<String, dynamic>;
@@ -339,7 +342,7 @@ class _DashboardState extends State<Dashboard> {
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
                 Icon(icon, size: 40.0, color: Colors.white),
-                SizedBox(width: 20.0),
+                const SizedBox(width: 20.0),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -351,7 +354,7 @@ class _DashboardState extends State<Dashboard> {
                         color: Colors.white,
                       ),
                     ),
-                    SizedBox(height: 5.0),
+                    const SizedBox(height: 5.0),
                     Text(
                       '$count',
                       style: GoogleFonts.dmSans(

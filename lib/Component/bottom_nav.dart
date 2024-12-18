@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:namyong_demo/screen/CreateWork.dart';
 import 'package:namyong_demo/screen/Dashboard.dart';
@@ -8,13 +9,11 @@ import 'package:namyong_demo/screen/Notification.dart';
 class BottomNavBar extends StatefulWidget {
   final int currentIndex;
   final Function(int) onTap;
-  final bool hasNotification;
 
   const BottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
-    this.hasNotification = false,
   });
 
   @override
@@ -23,11 +22,13 @@ class BottomNavBar extends StatefulWidget {
 
 class _BottomNavBarState extends State<BottomNavBar> {
   String role = '';
+  bool hasNotification = false; // Track notification state
 
   @override
   void initState() {
     super.initState();
     _loadRoleUserData();
+    _setupFirebaseMessaging(); // Set up Firebase Messaging listener
   }
 
   Future<void> _loadRoleUserData() async {
@@ -43,6 +44,22 @@ class _BottomNavBarState extends State<BottomNavBar> {
         print('Error loading user data: $e');
       }
     }
+  }
+
+  // Setup Firebase Messaging listener for foreground notifications
+  void _setupFirebaseMessaging() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Message received in foreground: ${message.notification?.body}');
+      setState(() {
+        hasNotification = true; // Set notification state to true
+      });
+    });
+
+    // You can also handle background and terminated state notifications if required
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('Notification opened!');
+      // Handle what happens when the app is opened from a notification
+    });
   }
 
   @override
@@ -121,18 +138,20 @@ class _BottomNavBarState extends State<BottomNavBar> {
                             ],
                           ),
                           // Show red dot above the notifications icon at index 2 when hasNotification is true
-                          if (i == 2 && role == "Checker" || i == 2 && role == "Gate out")
+                          if (i == 2 && (role == "Checker" || role == "Gate out"))
                             Positioned(
                               top: 8,
                               right: 20,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.red,
-                                ),
-                              ),
+                              child: hasNotification
+                                  ? Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.red,
+                                      ),
+                                    )
+                                  : const SizedBox(), // Show red dot if hasNotification is true
                             ),
                         ],
                       ),
@@ -160,6 +179,9 @@ class _BottomNavBarState extends State<BottomNavBar> {
       case 2:
         Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (context) => AcceptWorkPage()));
+        setState(() {
+          hasNotification = false; // Reset notification dot after visiting notification page
+        });
         break;
       default:
         break;

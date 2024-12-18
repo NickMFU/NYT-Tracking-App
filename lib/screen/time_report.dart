@@ -1,13 +1,13 @@
 import 'dart:io';
-import 'dart:typed_data';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/pdf.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 class TimeReportPage extends StatefulWidget {
   @override
@@ -294,7 +294,7 @@ class _TimeReportPageState extends State<TimeReportPage> {
         toolbarHeight: 100,
         title: const Text(
           "Time Report ",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,color: Colors.white),
         ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
